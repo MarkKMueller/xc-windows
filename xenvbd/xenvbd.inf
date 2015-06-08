@@ -36,7 +36,7 @@ Class=SCSIAdapter
 ClassGUID={4D36E97B-E325-11CE-BFC1-08002BE10318} 
 Provider=%OpenXT% 
 CatalogFile=xenvbd.cat
-DriverVer= 03/01/2008,4.2.0.0001
+DriverVer=05/26/2015,14.0.0.13456
 
 [DestinationDirs] 
 DefaultDestDir = 12 

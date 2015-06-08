@@ -31,49 +31,49 @@
 #include "xs.h"
 #include "xs_private.h"
 
-/* Don't include xs2.h.  We're not allowed to directly call any
+/* Don't include XenPVDAccessor.h.  We're not allowed to directly call any
    functions which it exports, because of the stupid Windows linking
    rules. */
 
-struct xs2_handle;
+struct XSPVDriver_handle;
 
 struct xs_watch {
     struct xs_watch *next, *prev;
     int xs_handle;
-    struct xs2_watch *xs2_watch;
+    struct XSPVDriver_watch *XSPVDriver_watch;
 };
 
-struct xs2_interface {
+struct XSPVDriver_interface {
     HMODULE module;
-    struct xs2_handle *(WINAPI *xs2_open)(void);
-    void (WINAPI *xs2_close)(struct xs2_handle *h);
-    BOOL (WINAPI *xs2_transaction_start)(struct xs2_handle *h);
-    void (WINAPI *xs2_transaction_abort)(struct xs2_handle *handle);
-    BOOL (WINAPI *xs2_transaction_commit)(struct xs2_handle *handle);
-    void *(WINAPI *xs2_read)(HANDLE hXS, const char *path, size_t *len);
-    BOOL (WINAPI *xs2_write)(struct xs2_handle *handle, const char *path,
+    struct XSPVDriver_handle *(WINAPI *XSPVDriver_open)(void);
+    void (WINAPI *XSPVDriver_close)(struct XSPVDriver_handle *h);
+    BOOL (WINAPI *XSPVDriver_transaction_start)(struct XSPVDriver_handle *h);
+    void (WINAPI *XSPVDriver_transaction_abort)(struct XSPVDriver_handle *handle);
+    BOOL (WINAPI *XSPVDriver_transaction_commit)(struct XSPVDriver_handle *handle);
+    void *(WINAPI *XSPVDriver_read)(HANDLE hXS, const char *path, size_t *len);
+    BOOL (WINAPI *XSPVDriver_write)(struct XSPVDriver_handle *handle, const char *path,
                       const char *data);
-    BOOL (WINAPI *xs2_write_bin)(struct xs2_handle *handle, const char *path,
+    BOOL (WINAPI *XSPVDriver_write_bin)(struct XSPVDriver_handle *handle, const char *path,
                                   const void *data, size_t size);
-    char **(WINAPI *xs2_directory)(struct xs2_handle *handle,
+    char **(WINAPI *XSPVDriver_directory)(struct XSPVDriver_handle *handle,
                                     const char *path,
                                     unsigned int *num);
-    struct xs2_watch *(WINAPI *xs2_watch)(struct xs2_handle *handle,
+    struct XSPVDriver_watch *(WINAPI *XSPVDriver_watch)(struct XSPVDriver_handle *handle,
                                            const char *path,
                                            HANDLE event);
-    void (WINAPI *xs2_unwatch)(struct xs2_watch *watch);
-    BOOL (WINAPI *xs2_remove)(HANDLE hXS, const char *path);
-    void (WINAPI *xs2_free)(const void *mem);
+    void (WINAPI *XSPVDriver_unwatch)(struct XSPVDriver_watch *watch);
+    BOOL (WINAPI *XSPVDriver_remove)(HANDLE hXS, const char *path);
+    void (WINAPI *XSPVDriver_free)(const void *mem);
 };
 
 static HANDLE mainLock;
 static int nextWatchHandle;
 static struct xs_watch *head_watch;
-static struct xs2_interface *volatile xs2_interface;
+static struct XSPVDriver_interface *volatile XSPVDriver_interface;
 
-static struct xs2_interface *get_xs2_interface(void)
+static struct XSPVDriver_interface *get_XSPVDriver_interface(void)
 {
-    struct xs2_interface *work;
+    struct XSPVDriver_interface *work;
     LONG r;
     HKEY reg;
     DWORD type;
@@ -82,8 +82,8 @@ static struct xs2_interface *get_xs2_interface(void)
     HMODULE module;
     DWORD err;
 
-    if (xs2_interface)
-        return xs2_interface;
+    if (XSPVDriver_interface)
+        return XSPVDriver_interface;
     r = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
                      "SOFTWARE\\Citrix\\XenTools",
                      0,
@@ -94,7 +94,7 @@ static struct xs2_interface *get_xs2_interface(void)
         return NULL;
     }
     sz = 0;
-    r = RegQueryValueEx(reg, "xs2.dll", NULL, &type, NULL, &sz);
+    r = RegQueryValueEx(reg, "XSPVDriver.dll", NULL, &type, NULL, &sz);
     if (r != ERROR_SUCCESS) {
         RegCloseKey(reg);
         SetLastError(r);
@@ -111,7 +111,7 @@ static struct xs2_interface *get_xs2_interface(void)
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
         return NULL;
     }
-    r = RegQueryValueEx(reg, "xs2.dll", NULL, &type, path, &sz);
+    r = RegQueryValueEx(reg, "XSPVDriver.dll", NULL, &type, path, &sz);
     if (r != ERROR_SUCCESS) {
         RegCloseKey(reg);
         free(path);
@@ -143,8 +143,8 @@ static struct xs2_interface *get_xs2_interface(void)
 #else
 #define DECORATE(n, s) "_" #n "@" #s
 #endif
-    work->xs2_open = (void *)GetProcAddress(module, DECORATE(xs2_open, 0));
-    if (!work->xs2_open) {
+    work->XSPVDriver_open = (void *)GetProcAddress(module, DECORATE(XSPVDriver_open, 0));
+    if (!work->XSPVDriver_open) {
     err:
         err = GetLastError();
         FreeLibrary(module);
@@ -157,26 +157,26 @@ static struct xs2_interface *get_xs2_interface(void)
     if (!work->name) {                                                   \
         goto err;                                                        \
     }
-    f(xs2_close, 4);
-    f(xs2_transaction_start, 4);
-    f(xs2_transaction_abort, 4);
-    f(xs2_transaction_commit, 4);
-    f(xs2_read, 12);
-    f(xs2_write, 12);
-    f(xs2_write_bin, 16);
-    f(xs2_directory, 12);
-    f(xs2_watch, 12);
-    f(xs2_unwatch, 4);
-    f(xs2_remove, 8);
-    f(xs2_free, 4);
+    f(XSPVDriver_close, 4);
+    f(XSPVDriver_transaction_start, 4);
+    f(XSPVDriver_transaction_abort, 4);
+    f(XSPVDriver_transaction_commit, 4);
+    f(XSPVDriver_read, 12);
+    f(XSPVDriver_write, 12);
+    f(XSPVDriver_write_bin, 16);
+    f(XSPVDriver_directory, 12);
+    f(XSPVDriver_watch, 12);
+    f(XSPVDriver_unwatch, 4);
+    f(XSPVDriver_remove, 8);
+    f(XSPVDriver_free, 4);
 #undef f
 #undef DECORATE
 #pragma warning(pop)
 
-    if (InterlockedCompareExchangePointer(&xs2_interface, work, NULL)) {
+    if (InterlockedCompareExchangePointer(&XSPVDriver_interface, work, NULL)) {
         FreeLibrary(module);
         free(work);
-        return xs2_interface;
+        return XSPVDriver_interface;
     } else {
         return work;
     }
@@ -184,35 +184,35 @@ static struct xs2_interface *get_xs2_interface(void)
 
 HANDLE xs_domain_open()
 {
-    struct xs2_interface *i = get_xs2_interface();
+    struct XSPVDriver_interface *i = get_XSPVDriver_interface();
     if (!i)
         return NULL;
     else
-        return i->xs2_open();
+        return i->XSPVDriver_open();
 }
 
 void xs_daemon_close(HANDLE _xih)
 {
-    xs2_interface->xs2_close(_xih);
+    XSPVDriver_interface->XSPVDriver_close(_xih);
 }
 
 BOOL xs_transaction_start(HANDLE _xih)
 {
-    return xs2_interface->xs2_transaction_start(_xih);
+    return XSPVDriver_interface->XSPVDriver_transaction_start(_xih);
 }
 
 BOOL xs_transaction_end(HANDLE _xih, BOOL fAbort)
 {
     if (fAbort) {
-        xs2_interface->xs2_transaction_abort(_xih);
+        XSPVDriver_interface->XSPVDriver_transaction_abort(_xih);
         return TRUE;
     } else {
-        return xs2_interface->xs2_transaction_commit(_xih);
+        return XSPVDriver_interface->XSPVDriver_transaction_commit(_xih);
     }
 }
 
 /* Some of these look a bit funny, because we need to move things from
-   the xs2 heap into the CRT heap. */
+   the XSPVDriver heap into the CRT heap. */
 void *xs_read(HANDLE _xih, const char *path, size_t *len)
 {
     void *res;
@@ -221,17 +221,17 @@ void *xs_read(HANDLE _xih, const char *path, size_t *len)
 
     if (len)
         *len = 0;
-    res = xs2_interface->xs2_read(_xih, path, &len2);
+    res = XSPVDriver_interface->XSPVDriver_read(_xih, path, &len2);
     if (res) {
         res2 = malloc(len2 + 1);
         if (!res2) {
-            xs2_interface->xs2_free(res);
+            XSPVDriver_interface->XSPVDriver_free(res);
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
             return NULL;
         }
         memcpy(res2, res, len2);
         ((char *)res2)[len2] = 0;
-        xs2_interface->xs2_free(res);
+        XSPVDriver_interface->XSPVDriver_free(res);
         if (len)
             *len = len2;
         return res2;
@@ -242,57 +242,57 @@ void *xs_read(HANDLE _xih, const char *path, size_t *len)
 
 BOOL xs_remove( HANDLE _xih, const char *path)
 {
-    return xs2_interface->xs2_remove(_xih, path);
+    return XSPVDriver_interface->XSPVDriver_remove(_xih, path);
 }
 
 BOOL xs_write_bin(HANDLE _xih, const char *path, const void *data,
                   size_t data_len)
 {
-    return xs2_interface->xs2_write_bin(_xih, path, data, data_len);
+    return XSPVDriver_interface->XSPVDriver_write_bin(_xih, path, data, data_len);
 }
 
 BOOL xs_write(HANDLE xih, const char *path, const char *data )
 {
-    return xs2_interface->xs2_write(xih, path, data);
+    return XSPVDriver_interface->XSPVDriver_write(xih, path, data);
 }
 
 char **xs_directory(HANDLE _xih, const char *path, unsigned int *num)
 {
-    char **xs2_res;
+    char **XSPVDriver_res;
     char **crt_res;
-    unsigned xs2_num;
+    unsigned XSPVDriver_num;
     unsigned x;
 
     if (num)
         *num = 0;
 
-    xs2_res = xs2_interface->xs2_directory(_xih, path, &xs2_num);
-    if (!xs2_res)
+    XSPVDriver_res = XSPVDriver_interface->XSPVDriver_directory(_xih, path, &XSPVDriver_num);
+    if (!XSPVDriver_res)
         return NULL;
 
-    crt_res = calloc(xs2_num, sizeof(crt_res[0]));
+    crt_res = calloc(XSPVDriver_num, sizeof(crt_res[0]));
     if (!crt_res)
         goto no_memory;
-    for (x = 0; x < xs2_num; x++) {
-        crt_res[x] = malloc(strlen(xs2_res[x]) + 1);
+    for (x = 0; x < XSPVDriver_num; x++) {
+        crt_res[x] = malloc(strlen(XSPVDriver_res[x]) + 1);
         if (!crt_res[x])
             goto no_memory;
-        strcpy(crt_res[x], xs2_res[x]);
-        xs2_interface->xs2_free(xs2_res[x]);
-        xs2_res[x] = NULL;
+        strcpy(crt_res[x], XSPVDriver_res[x]);
+        XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res[x]);
+        XSPVDriver_res[x] = NULL;
     }
-    xs2_interface->xs2_free(xs2_res);
+    XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res);
     if (num)
-        *num = xs2_num;
+        *num = XSPVDriver_num;
     return crt_res;
 
 no_memory:
-    for (x = 0; x < xs2_num; x++) {
+    for (x = 0; x < XSPVDriver_num; x++) {
         xs_free(crt_res[x]);
-        xs2_interface->xs2_free(xs2_res[x]);
+        XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res[x]);
     }
     xs_free(crt_res);
-    xs2_interface->xs2_free(xs2_res);
+    XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res);
     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
     return NULL;
 }
@@ -311,8 +311,8 @@ int xs_watch(HANDLE _xih, const char *path, HANDLE event)
         return -1;
     }
 
-    work->xs2_watch = xs2_interface->xs2_watch(_xih, path, event);
-    if (work->xs2_watch == NULL) {
+    work->XSPVDriver_watch = XSPVDriver_interface->XSPVDriver_watch(_xih, path, event);
+    if (work->XSPVDriver_watch == NULL) {
         err = GetLastError();
         free(work);
         SetLastError(err);
@@ -342,7 +342,7 @@ int xs_watch(HANDLE _xih, const char *path, HANDLE event)
                        the application's lifetime, we've got 2 billion
                        outstanding *at the same time*. */
                     ReleaseMutex(mainLock);
-                    xs2_interface->xs2_unwatch(work->xs2_watch);
+                    XSPVDriver_interface->XSPVDriver_unwatch(work->XSPVDriver_watch);
                     free(work);
                     /* For want of any better error codes. */
                     SetLastError(ERROR_TOO_MANY_OPEN_FILES);
@@ -391,7 +391,7 @@ BOOL xs_unwatch(HANDLE _xih, int handle)
     }
     ReleaseMutex(mainLock);
     if (watch) {
-        xs2_interface->xs2_unwatch(watch->xs2_watch);
+        XSPVDriver_interface->XSPVDriver_unwatch(watch->XSPVDriver_watch);
         free(watch);
         res = TRUE;
     } else {

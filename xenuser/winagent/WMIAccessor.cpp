@@ -36,7 +36,7 @@
 #include "WMIAccessor.h"
 #include "XService.h"
 #include "NicInfo.h"
-#include <xs2.h>
+#include <XenPVDAccessor.h>
 
 #include "xs_private.h"
 
@@ -560,9 +560,9 @@ UpdateProcessListInStore(process_counters *live)
                     "data/processes/%s",
                     wanted_entries[i]);
         XenstorePrintf(buf, "%d", (*live)[string(wanted_entries[i])]);
-        xs2_free(wanted_entries[i]);
+        XSPVDriver_free(wanted_entries[i]);
     }
-    xs2_free(wanted_entries);
+    XSPVDriver_free(wanted_entries);
 }
 
 void

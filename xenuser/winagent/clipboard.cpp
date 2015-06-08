@@ -49,7 +49,7 @@
 */
 #include <windows.h>
 #include <stdlib.h>
-#include "xs2.h"
+#include "XenPVDAccessor.h"
 #include "xs_private.h"
 #include "XService.h"
 
@@ -60,7 +60,7 @@
 
 /* We don't want to use the same handle as the main accessor, because
    we can end up colliding over transactions. */
-static struct xs2_handle *
+static struct XSPVDriver_handle *
 XsHandle;
 
 static struct {
@@ -135,10 +135,10 @@ ReportClipboardEvent(void)
     char *cur_value;
 
     XsLogMsg("reporting a clipboard event");
-    cur_value = (char *)xs2_read(XsHandle, "data/report_clipboard", &size);
+    cur_value = (char *)XSPVDriver_read(XsHandle, "data/report_clipboard", &size);
     if (cur_value != NULL) {
         /* qemu hasn't acked the previous message yet */
-        xs2_free(cur_value);
+        XSPVDriver_free(cur_value);
         return;
     }
     if (GetLastError() != ERROR_FILE_NOT_FOUND) {
@@ -149,7 +149,7 @@ ReportClipboardEvent(void)
 
     if (ReportClipboardState.need_reset) {
         XsLogMsg("reseting clipboard");
-        xs2_write(XsHandle, "data/report_clipboard", "");
+        XSPVDriver_write(XsHandle, "data/report_clipboard", "");
         ReportClipboardState.need_reset = FALSE;
         return;
     }
@@ -163,7 +163,7 @@ ReportClipboardEvent(void)
         MIN(strlen(ReportClipboardState.data) - ReportClipboardState.offset,
             MAX_CHUNKSIZE);
     if (bytes_this_time != 0) {
-        xs2_write_bin(XsHandle, "data/report_clipboard",
+        XSPVDriver_write_bin(XsHandle, "data/report_clipboard",
                      ReportClipboardState.data + ReportClipboardState.offset,
                      bytes_this_time);
         ReportClipboardState.offset += bytes_this_time;
@@ -189,7 +189,7 @@ SetClipboardEvent(HWND hwnd)
     /* Qemu just pushed in another chunk of update to the local
        clipboard.  Do something sensible with it. */
 
-    this_chunk = (char *)xs2_read(XsHandle, "data/set_clipboard", &size);
+    this_chunk = (char *)XSPVDriver_read(XsHandle, "data/set_clipboard", &size);
     if (this_chunk == NULL) {
         /* Probably a bogus watch firing before qemu set the value.
            Wait and try again later. */
@@ -197,7 +197,7 @@ SetClipboardEvent(HWND hwnd)
         return;
     }
 
-    /* Embedded nuls cause problems.  Don't copy them.  (xs2_read
+    /* Embedded nuls cause problems.  Don't copy them.  (XSPVDriver_read
        always returns a nul-terminated result) */
     size = strlen(this_chunk);
 
@@ -221,7 +221,7 @@ SetClipboardEvent(HWND hwnd)
         if (new_acc == NULL) {
             XsLogMsg("No memory for clipboard accumulator buffer (%d)",
                      new_acc_buf_size);
-            xs2_free(this_chunk);
+            XSPVDriver_free(this_chunk);
             return;
         }
         accumulated_clipboard = new_acc;
@@ -231,7 +231,7 @@ SetClipboardEvent(HWND hwnd)
     acc_clipboard = (char *)GlobalLock(accumulated_clipboard);
     if (!acc_clipboard) {
         DBGPRINT(("Failed to lock clipboard accumulation buffer"));
-        xs2_free(this_chunk);
+        XSPVDriver_free(this_chunk);
         return;
     }
     memcpy(acc_clipboard + acc_clipboard_size,
@@ -299,7 +299,7 @@ SetClipboardEvent(HWND hwnd)
         acc_clipboard_buf_size = 0;
     }
 
-    xs2_remove(XsHandle, "data/set_clipboard");
+    XSPVDriver_remove(XsHandle, "data/set_clipboard");
     XsLogMsg("processed clipboard event");
 }
 
@@ -438,7 +438,7 @@ MakeTheWindow(void)
 
 struct watch_event {
     HANDLE event;
-    struct xs2_watch *watch;
+    struct XSPVDriver_watch *watch;
 };
 
 static void
@@ -449,7 +449,7 @@ ReleaseWatch(struct watch_event *we)
     if (we->event != INVALID_HANDLE_VALUE)
         CloseHandle(we->event);
     if (we->watch)
-        xs2_unwatch(we->watch);
+        XSPVDriver_unwatch(we->watch);
     free(we);
 }
 
@@ -468,7 +468,7 @@ EstablishWatch(const char *path)
     we->watch = NULL;
     we->event = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (we->event != INVALID_HANDLE_VALUE)
-        we->watch = xs2_watch(XsHandle, path, we->event);
+        we->watch = XSPVDriver_watch(XsHandle, path, we->event);
     if (we->watch == NULL) {
         err = GetLastError();
         ReleaseWatch(we);
@@ -488,7 +488,7 @@ ClipboardThreadFunc(void)
 
     XsLogMsg("Starting clipboard sync");
 
-    XsHandle = xs2_open();
+    XsHandle = XSPVDriver_open();
     if (!XsHandle) {
         XsLogMsg("Cannot open xs.dll from clipboard thread");
         return;
@@ -499,7 +499,7 @@ ClipboardThreadFunc(void)
         XsLogMsg("Cannot establish clipboard watches");
         ReleaseWatch(set_clipboard);
         ReleaseWatch(report_clipboard);
-        xs2_close(XsHandle);
+        XSPVDriver_close(XsHandle);
         XsHandle = NULL;
         return;
     }
@@ -509,7 +509,7 @@ ClipboardThreadFunc(void)
         XsLogMsg("Cannot make clipboard window");
         ReleaseWatch(set_clipboard);
         ReleaseWatch(report_clipboard);
-        xs2_close(XsHandle);
+        XSPVDriver_close(XsHandle);
         XsHandle = NULL;
         return;
     }
@@ -556,7 +556,7 @@ ClipboardThreadFunc(void)
     /* Clear the thread message queue before we exit */
     ProcessPendingMessages();
 
-    xs2_close(XsHandle);
+    XSPVDriver_close(XsHandle);
     XsHandle = NULL;
     XsLogMsg("clipboard thread finished");
 }

@@ -24,7 +24,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <xs2.h>
+#include <XenPVDAccessor.h>
 #include <xenops.h>
 #include <xs_private.h>
 
@@ -44,11 +44,11 @@
 #define CONSUMER_SPIN_LIMIT 2048
 
 struct v2v_channel {
-    struct xs2_handle *xs2;
-    struct xs2_watch *remote_state_watch;
+    struct XSPVDriver_handle *XSPVDriver;
+    struct XSPVDriver_watch *remote_state_watch;
     struct xenops_handle *xenops;
     char *local_prefix;
-    char *remote_prefix; /* xs2_free() */
+    char *remote_prefix; /* XSPVDriver_free() */
     DOMAIN_ID peer_domid;
     HANDLE control_event;
     HANDLE receive_event;
@@ -96,11 +96,11 @@ destroy_channel(const struct v2v_channel *_chan)
     unsigned x;
 
     if (chan->remote_state_watch)
-        xs2_unwatch(chan->remote_state_watch);
+        XSPVDriver_unwatch(chan->remote_state_watch);
     free(chan->local_prefix);
-    xs2_free(chan->remote_prefix);
-    if (chan->xs2)
-        xs2_close(chan->xs2);
+    XSPVDriver_free(chan->remote_prefix);
+    if (chan->XSPVDriver)
+        XSPVDriver_close(chan->XSPVDriver);
     if (chan->control_event)
         CloseHandle(chan->control_event);
     if (chan->receive_event)
@@ -138,7 +138,7 @@ destroy_channel(const struct v2v_channel *_chan)
 static void
 cancel_crashed_on_crash(struct v2v_channel *chan)
 {
-    xs2_cancel_write_on_close(chan->xs2, chan->set_crashed_on_close);
+    XSPVDriver_cancel_write_on_close(chan->XSPVDriver, chan->set_crashed_on_close);
 }
 
 static BOOL
@@ -153,7 +153,7 @@ setup_crashed_on_crash(struct v2v_channel *chan)
         return FALSE;
     }
     s = v2v_endpoint_state_name(v2v_state_crashed);
-    chan->set_crashed_on_close = xs2_write_on_close(chan->xs2,
+    chan->set_crashed_on_close = XSPVDriver_write_on_close(chan->XSPVDriver,
                                                     path,
                                                     s,
                                                     strlen(s));
@@ -171,17 +171,17 @@ read_peer_domid(struct v2v_channel *chan)
     long r;
     char *s2;
 
-    s = xenstore_readv_string(chan->xs2, chan->local_prefix, "peer-domid",
+    s = xenstore_readv_string(chan->XSPVDriver, chan->local_prefix, "peer-domid",
                               NULL);
     if (!s)
         return FALSE;
     r = strtol(s, &s2, 10);
     if (*s2 || r < 0 || r > 0xffff) {
-        xs2_free(s);
+        XSPVDriver_free(s);
         SetLastError(ERROR_INVALID_DATA);
         return FALSE;
     }
-    xs2_free(s);
+    XSPVDriver_free(s);
     chan->peer_domid = wrap_DOMAIN_ID(r);
     return TRUE;
 }
@@ -201,13 +201,13 @@ make_channel(const char *xenbus_prefix)
     chan->send_event = CreateEvent(NULL, FALSE, TRUE, NULL);
     if (!chan->control_event || !chan->receive_event || !chan->send_event)
         goto err;
-    /* xenops *must* be opened before xs2, or the crash bits don't
+    /* xenops *must* be opened before XSPVDriver, or the crash bits don't
      * work.  This is a truly horrible hack. */
     chan->xenops = xenops_open();
     if (!chan->xenops)
         goto err;
-    chan->xs2 = xs2_open();
-    if (!chan->xs2)
+    chan->XSPVDriver = XSPVDriver_open();
+    if (!chan->XSPVDriver)
         goto err;
     chan->local_prefix = ystrdup(xenbus_prefix);
     if (!chan->local_prefix)
@@ -225,7 +225,7 @@ err:
 static BOOL
 connect_channel_xenbus(struct v2v_channel *chan)
 {
-    chan->remote_prefix = xenstore_readv_string(chan->xs2,
+    chan->remote_prefix = xenstore_readv_string(chan->XSPVDriver,
                                                 chan->local_prefix,
                                                 "backend",
                                                 NULL);
@@ -233,7 +233,7 @@ connect_channel_xenbus(struct v2v_channel *chan)
         return FALSE;
     if (!read_peer_domid(chan))
         return FALSE;
-    chan->remote_state_watch = xenstore_watchv(chan->xs2,
+    chan->remote_state_watch = xenstore_watchv(chan->XSPVDriver,
                                                chan->control_event,
                                                chan->remote_prefix,
                                                "state",
@@ -307,7 +307,7 @@ v2v_endpoint_state_name(enum v2v_endpoint_state state)
 static BOOL
 change_local_state(struct v2v_channel *channel, enum v2v_endpoint_state state)
 {
-    return xenstore_printfv(channel->xs2,
+    return xenstore_printfv(channel->XSPVDriver,
                             channel->local_prefix,
                             "state",
                             NULL,
@@ -359,7 +359,7 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
                             chan->control);
 
     for (;;) {
-        xs2_transaction_start(chan->xs2);
+        XSPVDriver_transaction_start(chan->XSPVDriver);
 
         if (!connect_channel_xenbus(chan))
             goto err;
@@ -371,7 +371,7 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
                                        chan->u.temple.prod_grefs + x))
                 goto err;
             sprintf(buf, "prod-gref-%d", x);
-            if (!xenstore_printfv(chan->xs2, chan->local_prefix, buf, NULL,
+            if (!xenstore_printfv(chan->XSPVDriver, chan->local_prefix, buf, NULL,
                                   "%d",
                                   xen_GRANT_REF(chan->u.temple.prod_grefs[x])))
                 goto err;
@@ -384,7 +384,7 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
                                         &chan->u.temple.cons_grefs[x]))
                 goto err;
             sprintf(buf, "cons-gref-%d", x);
-            if (!xenstore_printfv(chan->xs2, chan->local_prefix, buf, NULL,
+            if (!xenstore_printfv(chan->XSPVDriver, chan->local_prefix, buf, NULL,
                                   "%d",
                                   xen_GRANT_REF(chan->u.temple.cons_grefs[x])))
                 goto err;
@@ -404,7 +404,7 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
                                   &chan->send_evtchn_port))
             goto err;
 
-        if (!xenstore_scatter(chan->xs2, chan->local_prefix,
+        if (!xenstore_scatter(chan->XSPVDriver, chan->local_prefix,
                               "prod-order", xenstore_scatter_type_int,
                                   prod_ring_page_order,
                               "cons-order", xenstore_scatter_type_int,
@@ -421,7 +421,7 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
             goto err;
         if (!change_local_state(chan, v2v_state_listening))
             goto err;
-        if (xs2_transaction_commit(chan->xs2))
+        if (XSPVDriver_transaction_commit(chan->XSPVDriver))
             break;
         if (GetLastError() != ERROR_RETRY)
             goto err;
@@ -441,9 +441,9 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
         chan->receive_evtchn_port = null_EVTCHN_PORT();
         xenops_evtchn_close(chan->xenops, chan->send_evtchn_port);
         chan->send_evtchn_port = null_EVTCHN_PORT();
-        xs2_unwatch(chan->remote_state_watch);
+        XSPVDriver_unwatch(chan->remote_state_watch);
         chan->remote_state_watch = NULL;
-        xs2_free(chan->remote_prefix);
+        XSPVDriver_free(chan->remote_prefix);
         chan->remote_prefix = NULL;
         cancel_crashed_on_crash(chan);
     }
@@ -465,7 +465,7 @@ v2v_get_remote_state(struct v2v_channel *channel)
     char *raw;
     enum v2v_endpoint_state res;
 
-    raw = xenstore_readv_string(channel->xs2,
+    raw = xenstore_readv_string(channel->XSPVDriver,
                                 channel->remote_prefix,
                                 "state",
                                 NULL);
@@ -485,7 +485,7 @@ v2v_get_remote_state(struct v2v_channel *channel)
         res = v2v_state_crashed;
     else
         res = v2v_state_unknown;
-    xs2_free(raw);
+    XSPVDriver_free(raw);
     if (res == v2v_state_unknown)
         SetLastError(ERROR_INVALID_DATA);
     return res;
@@ -499,35 +499,35 @@ v2v_accept(struct v2v_channel *channel)
     DWORD err;
 
     while (1) {
-        xs2_transaction_start(channel->xs2);
+        XSPVDriver_transaction_start(channel->XSPVDriver);
         remote_state = v2v_get_remote_state(channel);
         switch (remote_state) {
         case v2v_state_unready:
         case v2v_state_disconnected:
         case v2v_state_crashed:
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             WaitForSingleObject(channel->control_event, INFINITE);
             break;
         case v2v_state_listening:
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             SetLastError(ERROR_POSSIBLE_DEADLOCK);
             return FALSE;
         case v2v_state_disconnecting:
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             SetLastError(ERROR_VC_DISCONNECTED);
             return FALSE;
         case v2v_state_unknown:
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             return FALSE;
         case v2v_state_connected:
             ret = change_local_state(channel, v2v_state_connected);
             if (!ret) {
                 err = GetLastError();
-                xs2_transaction_abort(channel->xs2);
+                XSPVDriver_transaction_abort(channel->XSPVDriver);
                 SetLastError(err);
                 return FALSE;
             }
-            if (xs2_transaction_commit(channel->xs2))
+            if (XSPVDriver_transaction_commit(channel->XSPVDriver))
                 return TRUE;
             if (GetLastError() != ERROR_RETRY)
                 return FALSE;
@@ -554,7 +554,7 @@ v2v_connect(const char *xenbus_prefix, struct v2v_channel **channel)
         if (!chan)
             return FALSE;
 
-        xs2_transaction_start(chan->xs2);
+        XSPVDriver_transaction_start(chan->XSPVDriver);
 
         if (!connect_channel_xenbus(chan))
             goto err;
@@ -567,7 +567,7 @@ v2v_connect(const char *xenbus_prefix, struct v2v_channel **channel)
             goto err;
         }
 
-        if (!xenstore_gather(chan->xs2,
+        if (!xenstore_gather(chan->XSPVDriver,
                              chan->remote_prefix,
                              "prod-order",
                                  xenstore_gather_type_int,
@@ -595,7 +595,7 @@ v2v_connect(const char *xenbus_prefix, struct v2v_channel **channel)
 
         for (x = 0; x < 1 << producer_ring_order; x++) {
             sprintf(buf, "prod-gref-%d", x);
-            if (!xenstore_gather(chan->xs2, chan->remote_prefix,
+            if (!xenstore_gather(chan->XSPVDriver, chan->remote_prefix,
                                  buf, xenstore_gather_type_alien_grant_ref,
                                  chan->u.supplicant.prod_grefs + x, NULL))
                 goto err;
@@ -603,7 +603,7 @@ v2v_connect(const char *xenbus_prefix, struct v2v_channel **channel)
 
         for (x = 0; x < 1 << consumer_ring_order; x++) {
             sprintf(buf, "cons-gref-%d", x);
-            if (!xenstore_gather(chan->xs2, chan->remote_prefix,
+            if (!xenstore_gather(chan->XSPVDriver, chan->remote_prefix,
                                  buf, xenstore_gather_type_alien_grant_ref,
                                  chan->u.supplicant.cons_grefs + x, NULL))
                 goto err;
@@ -645,7 +645,7 @@ v2v_connect(const char *xenbus_prefix, struct v2v_channel **channel)
         if (!change_local_state(chan, v2v_state_connected))
             goto err;
 
-        if (xs2_transaction_commit(chan->xs2))
+        if (XSPVDriver_transaction_commit(chan->XSPVDriver))
             break;
         if (GetLastError() != ERROR_RETRY)
             goto err;
@@ -693,14 +693,14 @@ v2v_disconnect_temple(const struct v2v_channel *_channel)
 
     /* Get the other end to disconnect */
     for (;;) {
-        xs2_transaction_start(channel->xs2);
+        XSPVDriver_transaction_start(channel->XSPVDriver);
         remote_state = v2v_get_remote_state(channel);
         switch (remote_state) {
         case v2v_state_unknown:
             err = GetLastError();
             if (err == ERROR_FILE_NOT_FOUND)
                 break;
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             SetLastError(err);
             return FALSE;
 
@@ -714,17 +714,17 @@ v2v_disconnect_temple(const struct v2v_channel *_channel)
         case v2v_state_crashed:
             break;
         case v2v_state_connected:
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             WaitForSingleObject(channel->control_event, INFINITE);
             continue;
         }
         if (!change_local_state(channel, v2v_state_disconnected)) {
             err = GetLastError();
-            xs2_transaction_abort(channel->xs2);
+            XSPVDriver_transaction_abort(channel->XSPVDriver);
             SetLastError(err);
             return FALSE;
         }
-        if (xs2_transaction_commit(channel->xs2))
+        if (XSPVDriver_transaction_commit(channel->XSPVDriver))
             break;
         if (GetLastError() == ERROR_RETRY)
             continue;

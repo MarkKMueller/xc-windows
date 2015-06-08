@@ -23,7 +23,7 @@
 /**************************************************************************
  *
  * XS.DLL IS OBSOLETE AND SHOULD NOT BE USED FOR NEW PROGRAMS.  THIS IS
- * PURELY A COMPATIBILITY LAYER OVER XS2.DLL.
+ * PURELY A COMPATIBILITY LAYER OVER XSPVDRIVER.DLL.
  *
  * DO NOT USE
  * DO NOT USE

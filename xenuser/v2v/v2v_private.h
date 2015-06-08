@@ -23,14 +23,14 @@
 #ifndef V2V_PRIVATE_H__
 #define V2V_PRIVATE_H__
 
-struct xs2_handle;
+struct XSPVDriver_handle;
 
 void *ymalloc(size_t size);
 char *ystrdup(const char *str);
 void yfree(const void *ptr);
 
-char *xenstore_readv_string(struct xs2_handle *xs2, ...);
-struct xs2_watch *xenstore_watchv(struct xs2_handle *xs2, HANDLE event, ...);
+char *xenstore_readv_string(struct XSPVDriver_handle *XSPVDriver, ...);
+struct XSPVDriver_watch *xenstore_watchv(struct XSPVDriver_handle *XSPVDriver, HANDLE event, ...);
 
 enum xenstore_scatter_type {
     xenstore_scatter_type_bad,
@@ -39,7 +39,7 @@ enum xenstore_scatter_type {
     xenstore_scatter_type_string,
     xenstore_scatter_type_int
 };
-BOOL xenstore_scatter(struct xs2_handle *xs2, const char *prefix, ...);
+BOOL xenstore_scatter(struct XSPVDriver_handle *XSPVDriver, const char *prefix, ...);
 
 enum xenstore_gather_type {
     xenstore_gather_type_bad,
@@ -47,9 +47,9 @@ enum xenstore_gather_type {
     xenstore_gather_type_alien_evtchn_port,
     xenstore_gather_type_int
 };
-BOOL xenstore_gather(struct xs2_handle *xs2, const char *prefix, ...);
+BOOL xenstore_gather(struct XSPVDriver_handle *XSPVDriver, const char *prefix, ...);
 
-BOOL xenstore_printfv(struct xs2_handle *xs2, ...);
+BOOL xenstore_printfv(struct XSPVDriver_handle *XSPVDriver, ...);
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 

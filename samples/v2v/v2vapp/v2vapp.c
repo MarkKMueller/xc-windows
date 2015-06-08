@@ -26,7 +26,7 @@
 #include <conio.h>
 #include <rpc.h>
 #include "v2vapp.h"
-#include "xs2.h"
+#include "XenPVDAccessor.h"
 
 #define V2V_CONFIG_BUFFER_SIZE 1024
 
@@ -170,14 +170,14 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
 {
 #define V2V_EXTRA_BUF 128
     ULONG error = ERROR_SUCCESS;
-    struct xs2_handle *xs2 = NULL;
+    struct XSPVDriver_handle *XSPVDriver = NULL;
     char *path = NULL;
     char *remote = NULL;
     char *peer = NULL;
 
     do {
-        xs2 = xs2_open();
-        if (!xs2) {
+        XSPVDriver = XSPVDriver_open();
+        if (!XSPVDriver) {
             printf("V2VAPP failed to open xenstore - error: 0x%x\n", GetLastError());
             error = ERROR_GEN_FAILURE;
             break;
@@ -191,7 +191,7 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
         }
         strcpy(path, vac->localPrefix);
         strcat(path, "/backend");
-        remote = (char*)xs2_read(xs2, path, NULL);
+        remote = (char*)XSPVDriver_read(XSPVDriver, path, NULL);
         if ((!remote)||(strlen(remote) == 0)) {
             printf("V2VAPP could not find backend prefix in xenstore - error: 0x%x\n", GetLastError());
             error = ERROR_GEN_FAILURE;
@@ -200,7 +200,7 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
 
         strcpy(path, vac->localPrefix);
         strcat(path, "/peer-domid");
-        peer = (char*)xs2_read(xs2, path, NULL);
+        peer = (char*)XSPVDriver_read(XSPVDriver, path, NULL);
         if ((!peer)||(strlen(peer) == 0)) {
             printf("V2VAPP could not find peer domain id in xenstore - error: 0x%x\n", GetLastError());
             error = ERROR_GEN_FAILURE;
@@ -210,13 +210,13 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
     } while (0);
     
     if (peer)
-        xs2_free(peer);
+        XSPVDriver_free(peer);
     if (remote)
-        xs2_free(remote);
+        XSPVDriver_free(remote);
     if (path)
         free(path);
-    if (xs2)
-        xs2_close(xs2);
+    if (XSPVDriver)
+        XSPVDriver_close(XSPVDriver);
 
     return error;
 }

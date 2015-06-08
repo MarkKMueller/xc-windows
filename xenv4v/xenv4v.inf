@@ -33,7 +33,7 @@ Class = System
 ClassGUID = {4d36e97d-e325-11ce-bfc1-08002be10318}
 Provider = %OpenXT% 
 CatalogFile = xenv4v.cat
-DriverVer = 02/04/2010,1.0.0.0000
+DriverVer=05/26/2015,14.0.0.13456
 
 [DestinationDirs] 
 DefaultDestDir = 12 

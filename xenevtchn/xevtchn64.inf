@@ -33,7 +33,7 @@ Class=System
 ClassGUID={4d36e97d-e325-11ce-bfc1-08002be10318} 
 Provider=%OpenXT% 
 CatalogFile=xevtchn.cat
-DriverVer= 03/01/2008,4.2.0.0001
+DriverVer=05/26/2015,14.0.0.13456
 
 [DestinationDirs]
 DefaultDestDir = 12

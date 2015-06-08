@@ -30,7 +30,7 @@ signature  = "$Windows NT$"
 Class      = Net
 ClassGUID  = {4d36e972-e325-11ce-bfc1-08002be10318}
 Provider   = %OpenXT%
-DriverVer=08/13/2014,14.0.0.13456
+DriverVer=05/26/2015,14.0.0.13456
 CatalogFile= xennet.cat
 
 [ControlFlags]

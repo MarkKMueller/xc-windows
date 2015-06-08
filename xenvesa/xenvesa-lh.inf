@@ -30,7 +30,7 @@ signature  = "$CHICAGO$"
 Class      = Display
 ClassGUID  = {4D36E968-E325-11CE-BFC1-08002BE10318}
 Provider   = %COMPANY% 
-DriverVer  = 07/23/2010,1.0.0.0000
+DriverVer=05/26/2015,14.0.0.13456
 CatalogFile= xenvesa-lh.cat
 
 [DestinationDirs]

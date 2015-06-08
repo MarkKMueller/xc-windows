@@ -1,10 +1,9 @@
-DIRS=xs2 \
+DIRS=XenPVDAccessor \
      xs \
      util \
      xstest \
      xs2test \
      xstest_dyn \
-     winagent \
      xenstore_client \
      xenops \
      tests \

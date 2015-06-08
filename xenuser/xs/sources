@@ -9,7 +9,7 @@ TARGETTYPE=DYNLINK
 #uncomment for unicode version, comment for ansi
 #C_DEFINES=/D_UNICODE /DUNICODE
 
-INCLUDES=$(INCLUDES);..\xs2
+INCLUDES=$(INCLUDES);..\XenPVDAccessor
 
 TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 	$(SDK_LIB_PATH)\user32.lib \

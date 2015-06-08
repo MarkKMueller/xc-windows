@@ -28,14 +28,14 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include "v2vapp.h"
-#include "xs2.h"
+#include "XenPVDAccessor.h"
 #include "v2v.h"
 
 /************************** GENERAL **************************/
 typedef struct _V2V_CANCEL_STATE {
     HANDLE cancelEvent;
-    struct xs2_handle *xs2;
-    struct xs2_watch *cancelWatch;
+    struct XSPVDriver_handle *XSPVDriver;
+    struct XSPVDriver_watch *cancelWatch;
     char watchPath[MAX_PATH + 1];
 } V2V_CANCEL_STATE, *PV2V_CANCEL_STATE;
 
@@ -97,26 +97,26 @@ V2vInitCancelState(V2V_CANCEL_STATE *cs, const char *prefix)
 {
     memset(cs, 0, sizeof(V2V_CANCEL_STATE));
 
-    cs->xs2 = xs2_open();
-    if (cs->xs2 == NULL) {       
-        printf("V2VAPP-CANCEL failed to open xs2 library\n");
+    cs->XSPVDriver = XSPVDriver_open();
+    if (cs->XSPVDriver == NULL) {
+        printf("V2VAPP-CANCEL failed to open XSPVDriver library\n");
         return FALSE;
     }
 
     cs->cancelEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (cs->cancelEvent == NULL) {
         printf("V2VAPP-CANCEL failed to create cancel event\n");
-        xs2_close(cs->xs2);
+        XSPVDriver_close(cs->XSPVDriver);
         return FALSE;
     }
 
     strcpy(cs->watchPath, prefix);
     strcat(cs->watchPath, "/cancel");
-    cs->cancelWatch = xs2_watch(cs->xs2, cs->watchPath, cs->cancelEvent);
+    cs->cancelWatch = XSPVDriver_watch(cs->XSPVDriver, cs->watchPath, cs->cancelEvent);
     if (cs->cancelWatch == NULL) {       
         printf("V2VAPP-CANCEL failed to register cancel watch\n");
         CloseHandle(cs->cancelEvent);
-        xs2_close(cs->xs2);
+        XSPVDriver_close(cs->XSPVDriver);
         return FALSE;
     }
 
@@ -127,11 +127,11 @@ static void
 V2vFreeCancelState(V2V_CANCEL_STATE *cs)
 {
     if (cs->cancelWatch != NULL)
-        xs2_unwatch(cs->cancelWatch);
+        XSPVDriver_unwatch(cs->cancelWatch);
     if (cs->cancelEvent != NULL)
         CloseHandle(cs->cancelEvent);
-    if (cs->xs2 != NULL)
-        xs2_close(cs->xs2);
+    if (cs->XSPVDriver != NULL)
+        XSPVDriver_close(cs->XSPVDriver);
 }
 
 static BOOL
@@ -140,7 +140,7 @@ V2vTestCancelState(V2V_CANCEL_STATE *cs)
     char *val;
     BOOL rc = TRUE;
 
-    val = xs2_read(cs->xs2, cs->watchPath, NULL);
+    val = XSPVDriver_read(cs->XSPVDriver, cs->watchPath, NULL);
     if (val == NULL) {
         printf("V2VAPP-CANCEL failed to read cancel value; returning cancel now.\n");
         return TRUE;
@@ -148,7 +148,7 @@ V2vTestCancelState(V2V_CANCEL_STATE *cs)
     if (strcmp(val, "0") == 0)
         rc = FALSE;
 
-    xs2_free(val);
+    XSPVDriver_free(val);
     return rc;
 }
 

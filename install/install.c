@@ -165,7 +165,7 @@ void SetXSdllRegKey(const char *path)
                        &handle,
                        NULL) != ERROR_SUCCESS)
         return;
-    RegSetValueEx(handle, "xs2.dll", 0, REG_SZ,
+    RegSetValueEx(handle, "XSPVDriver.dll", 0, REG_SZ,
                   (BYTE *)path, (DWORD)(strlen(path) + 1));
     RegCloseKey(handle);
 }

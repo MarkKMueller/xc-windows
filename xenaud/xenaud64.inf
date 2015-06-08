@@ -10,7 +10,7 @@ Signature = "$Windows NT$"
 Class = MEDIA
 ClassGUID = {4d36e96c-e325-11ce-bfc1-08002be10318}
 provider = %ProviderName%
-DriverVer=03/13/2015,14.0.0.400
+DriverVer=05/26/2015,14.0.0.13456
 CatalogFile = xenaud.cat
 
 [DestinationDirs]

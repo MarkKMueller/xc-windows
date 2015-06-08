@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "xs_private.h"
-#include "xs2.h"
+#include "XenPVDAccessor.h"
 
 typedef DWORD WTSGetActiveConsoleSessionId_t(void);
 
@@ -65,16 +65,16 @@ BOOL WINAPI WTSQuerySessionInformationA(HANDLE hServer,
 VOID WINAPI WTSFreeMemory(PVOID pMemory);
 
 int WINAPI xs_uninstalling(void) { 
-	struct xs2_handle *xs_handle;
-	xs_handle = xs2_open();
+        struct XSPVDriver_handle *xs_handle;
+        xs_handle = XSPVDriver_open();
 	if (!xs_handle)
 		return -1;
-	if(!xs2_write(xs_handle, "attr/PVAddonsUninstalled", "1"))
+        if(!XSPVDriver_write(xs_handle, "attr/PVAddonsUninstalled", "1"))
 	{
-		xs2_close(xs_handle);
+                XSPVDriver_close(xs_handle);
 		return -1;
 	}
-	xs2_close(xs_handle);
+        XSPVDriver_close(xs_handle);
 	return 0;
 }
 

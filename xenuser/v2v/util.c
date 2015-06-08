@@ -23,7 +23,7 @@
 #include <windows.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <xs2.h>
+#include <XenPVDAccessor.h>
 #include <xs_private.h>
 #include <xenops.h>
 
@@ -65,41 +65,41 @@ yfree(const void *ptr)
 }
 
 char *
-xenstore_readv_string(struct xs2_handle *xs2, ...)
+xenstore_readv_string(struct XSPVDriver_handle *XSPVDriver, ...)
 {
     char *path;
     va_list args;
     void *res;
 
-    va_start(args, xs2);
+    va_start(args, XSPVDriver);
     path = xs_vassemble_strings("/", &args);
     va_end(args);
     if (!path)
         return NULL;
-    res = xs2_read(xs2, path, NULL);
+    res = XSPVDriver_read(XSPVDriver, path, NULL);
     yfree(path);
     return res;
 }
 
-struct xs2_watch *
-xenstore_watchv(struct xs2_handle *xs2, HANDLE event, ...)
+struct XSPVDriver_watch *
+xenstore_watchv(struct XSPVDriver_handle *XSPVDriver, HANDLE event, ...)
 {
     char *path;
     va_list args;
-    struct xs2_watch *res;
+    struct XSPVDriver_watch *res;
 
     va_start(args, event);
     path = xs_vassemble_strings("/", &args);
     va_end(args);
     if (!path)
         return NULL;
-    res = xs2_watch(xs2, path, event);
+    res = XSPVDriver_watch(XSPVDriver, path, event);
     yfree(path);
     return res;
 }
 
 BOOL
-xenstore_printfv(struct xs2_handle *xs2, ...)
+xenstore_printfv(struct XSPVDriver_handle *XSPVDriver, ...)
 {
     va_list args;
     char *path;
@@ -107,7 +107,7 @@ xenstore_printfv(struct xs2_handle *xs2, ...)
     const char *fmt;
     BOOL res;
 
-    va_start(args, xs2);
+    va_start(args, XSPVDriver);
     path = xs_vassemble_strings("/", &args);
     if (!path) {
         va_end(args);
@@ -121,14 +121,14 @@ xenstore_printfv(struct xs2_handle *xs2, ...)
         return FALSE;
     }
 
-    res = xs2_write(xs2, path, buf);
+    res = XSPVDriver_write(XSPVDriver, path, buf);
     yfree(path);
     yfree(buf);
     return res;
 }
 
 BOOL
-xenstore_scatter(struct xs2_handle *xs2, const char *prefix, ...)
+xenstore_scatter(struct XSPVDriver_handle *XSPVDriver, const char *prefix, ...)
 {
     va_list args;
     BOOL res;
@@ -146,27 +146,27 @@ xenstore_scatter(struct xs2_handle *xs2, const char *prefix, ...)
         case xenstore_scatter_type_grant_ref: {
             GRANT_REF gref;
             gref = va_arg(args, GRANT_REF);
-            res = xenstore_printfv(xs2, prefix, name, NULL,
+            res = xenstore_printfv(XSPVDriver, prefix, name, NULL,
                                    "%d", xen_GRANT_REF(gref));
             break;
         }
         case xenstore_scatter_type_evtchn_port: {
             EVTCHN_PORT port;
             port = va_arg(args, EVTCHN_PORT);
-            res = xenstore_printfv(xs2, prefix, name, NULL,
+            res = xenstore_printfv(XSPVDriver, prefix, name, NULL,
                                    "%d", unwrap_EVTCHN_PORT(port));
             break;
         }
         case xenstore_scatter_type_string: {
             const char *str;
             str = va_arg(args, const char *);
-            res = xenstore_printfv(xs2, prefix, name, NULL, "%s", str);
+            res = xenstore_printfv(XSPVDriver, prefix, name, NULL, "%s", str);
             break;
         }
         case xenstore_scatter_type_int: {
             int i;
             i = va_arg(args, int);
-            res = xenstore_printfv(xs2, prefix, name, NULL, "%d", i);
+            res = xenstore_printfv(XSPVDriver, prefix, name, NULL, "%d", i);
             break;
         }
         default: {
@@ -183,7 +183,7 @@ xenstore_scatter(struct xs2_handle *xs2, const char *prefix, ...)
 }
 
 BOOL
-xenstore_gather(struct xs2_handle *xs2, const char *prefix, ...)
+xenstore_gather(struct XSPVDriver_handle *XSPVDriver, const char *prefix, ...)
 {
     va_list args;
     const char *name;
@@ -199,7 +199,7 @@ xenstore_gather(struct xs2_handle *xs2, const char *prefix, ...)
         if (!name)
             break;
         type = va_arg(args, enum xenstore_gather_type);
-        raw_data = xenstore_readv_string(xs2,
+        raw_data = xenstore_readv_string(XSPVDriver,
                                         prefix,
                                         name,
                                         NULL);
@@ -242,7 +242,7 @@ xenstore_gather(struct xs2_handle *xs2, const char *prefix, ...)
         }
         }
 
-        xs2_free(raw_data);
+        XSPVDriver_free(raw_data);
         if (r != 1) {
             SetLastError(ERROR_INVALID_DATA);
             res = FALSE;

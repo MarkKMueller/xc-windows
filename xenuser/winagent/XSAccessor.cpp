@@ -29,21 +29,21 @@
 #include <windows.h>
 #include "stdafx.h"
 #include "XSAccessor.h"
-#include "xs2.h"
+#include "XenPVDAccessor.h"
 #include "xs_private.h"
 
-static __declspec(thread) struct xs2_handle *XenstoreHandle;
+static __declspec(thread) struct XSPVDriver_handle *XenstoreHandle;
 
 static int64_t update_cnt;
 
 void GetXenTime(FILETIME *now)
 {
-    xs2_get_xen_time(XenstoreHandle, now);
+    XSPVDriver_get_xen_time(XenstoreHandle, now);
 }
 
 int ListenSuspend(HANDLE event)
 {
-    if (!xs2_listen_suspend(XenstoreHandle, event))
+    if (!XSPVDriver_listen_suspend(XenstoreHandle, event))
         return -1;
     else
         return 0;
@@ -53,25 +53,25 @@ void XsLog(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    xs2_vlog(XenstoreHandle, fmt, args);
+    XSPVDriver_vlog(XenstoreHandle, fmt, args);
     va_end(args);
 }
 
 void InitXSAccessor(void)
 {
-	XenstoreHandle = xs2_open();
+        XenstoreHandle = XSPVDriver_open();
     if (!XenstoreHandle) {
         DBGPRINT (("Failed to connect to xenstore."));
         exit(1);
     }
-    xs2_make_precious(XenstoreHandle);
+    XSPVDriver_make_precious(XenstoreHandle);
 }
 
 void ShutdownXSAccessor(void)
 {
     if (XenstoreHandle) {
-        xs2_unmake_precious(XenstoreHandle);
-        xs2_close(XenstoreHandle);
+        XSPVDriver_unmake_precious(XenstoreHandle);
+        XSPVDriver_close(XenstoreHandle);
     }
 }
 
@@ -91,18 +91,18 @@ int XenstorePrintf(const char *path, const char *fmt, ...)
     }
 
     /* Now have the thing we're trying to write. */
-    return xs2_write( XenstoreHandle, path, buf);
+    return XSPVDriver_write( XenstoreHandle, path, buf);
 }
 
 int XenstoreWrite(const char *path, const void *data, size_t len)
 {
-    return xs2_write_bin( XenstoreHandle, path, data, len );
+    return XSPVDriver_write_bin( XenstoreHandle, path, data, len );
 }
 
 void XenstoreKickXapi()
 {
     /* Old protocol */
-    xs2_write (XenstoreHandle, "data/updated", "1");
+    XSPVDriver_write (XenstoreHandle, "data/updated", "1");
     /* New protocol */
     XenstorePrintf("data/update_cnt", "%I64d", update_cnt);
 
@@ -140,19 +140,19 @@ int XenstoreDoNicDump(
     if (XenstoreList(domainVifPath, &vifEntries, &numEntries) >= 0) {
         for (entry = 0; entry < numEntries; entry++) {
             _snprintf(path, MAX_CHAR_LEN, "data/vif/%s", vifEntries[entry]);
-            xs2_remove(XenstoreHandle, path);
+            XSPVDriver_remove(XenstoreHandle, path);
             _snprintf(path, MAX_CHAR_LEN, "attr/eth%s", vifEntries[entry]);
-            xs2_remove(XenstoreHandle, path);
-            xs2_free(vifEntries[entry]);
+            XSPVDriver_remove(XenstoreHandle, path);
+            XSPVDriver_free(vifEntries[entry]);
         }
-        xs2_free(vifEntries);
+        XSPVDriver_free(vifEntries);
     }
 
     do 
     {
         hStatus = ERROR_SUCCESS;
 
-        xs2_transaction_start( XenstoreHandle );
+        XSPVDriver_transaction_start( XenstoreHandle );
 
         ret |= XenstorePrintf("data/num_vif", "%d", num_vif);
 
@@ -174,7 +174,7 @@ int XenstoreDoNicDump(
             }
         }
 
-        if(!xs2_transaction_commit(XenstoreHandle))
+        if(!XSPVDriver_transaction_commit(XenstoreHandle))
         {
             hStatus = GetLastError ();
             if (hStatus != ERROR_RETRY)
@@ -193,7 +193,7 @@ int XenstoreDoNicDump(
 int
 XenstoreList(const char *path, char ***entries, unsigned *numEntries)
 {
-    *entries = xs2_directory(XenstoreHandle, path, numEntries);
+    *entries = XSPVDriver_directory(XenstoreHandle, path, numEntries);
     if (*entries)
         return 0;
     else
@@ -203,7 +203,7 @@ XenstoreList(const char *path, char ***entries, unsigned *numEntries)
 int
 XenstoreRemove(const char *path)
 {
-    if (xs2_remove(XenstoreHandle, path))
+    if (XSPVDriver_remove(XenstoreHandle, path))
         return 0;
     else
         return -1;
@@ -213,22 +213,22 @@ ssize_t
 XenstoreRead(const char* path, char** value)
 {
     size_t len;
-    *value = (char *)xs2_read(XenstoreHandle, path, &len);
+    *value = (char *)XSPVDriver_read(XenstoreHandle, path, &len);
     if (*value)
         return len;
     else
         return -1;
 }
 
-struct xs2_watch *
+struct XSPVDriver_watch *
 XenstoreWatch(const char *path, HANDLE event)
 {
-    return xs2_watch(XenstoreHandle, path, event);
+    return XSPVDriver_watch(XenstoreHandle, path, event);
 }
 
 void
-XenstoreUnwatch(struct xs2_watch *watch)
+XenstoreUnwatch(struct XSPVDriver_watch *watch)
 {
-    return xs2_unwatch(watch);
+    return XSPVDriver_unwatch(watch);
 }
 

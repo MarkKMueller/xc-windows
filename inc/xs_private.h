@@ -68,14 +68,14 @@ XSUTIL_API extern struct xs_error_renderer xs_render_error_stderr;
 XSUTIL_API char *WINAPI xs_vassemble_strings(const char *sep, va_list *args);
 XSUTIL_API char *WINAPI xs_assemble_strings(const char *sep, ...);
 
-#ifdef XS2_API
-XS2_API int WINAPI xs2_listen_suspend(HANDLE hXS, HANDLE event);
-XS2_API BOOL WINAPI xs2_unlisten_suspend(HANDLE hXS);
-XS2_API void WINAPI xs2_get_xen_time(HANDLE hXS, FILETIME *out);
-XS2_API void WINAPI xs2_make_precious(HANDLE hXS);
-XS2_API void WINAPI xs2_unmake_precious(HANDLE hXS);
-XS2_API void WINAPI xs2_log(HANDLE hXS, const char *fmt, ...);
-XS2_API void WINAPI xs2_vlog(HANDLE hXS, const char *fmt, va_list args);
+#ifdef XSPVDRIVER_API
+XSPVDRIVER_API int WINAPI XSPVDriver_listen_suspend(HANDLE hXS, HANDLE event);
+XSPVDRIVER_API BOOL WINAPI XSPVDriver_unlisten_suspend(HANDLE hXS);
+XSPVDRIVER_API void WINAPI XSPVDriver_get_xen_time(HANDLE hXS, FILETIME *out);
+XSPVDRIVER_API void WINAPI XSPVDriver_make_precious(HANDLE hXS);
+XSPVDRIVER_API void WINAPI XSPVDriver_unmake_precious(HANDLE hXS);
+XSPVDRIVER_API void WINAPI XSPVDriver_log(HANDLE hXS, const char *fmt, ...);
+XSPVDRIVER_API void WINAPI XSPVDriver_vlog(HANDLE hXS, const char *fmt, va_list args);
 typedef struct {
     ULONG64 __h;
 } WRITE_ON_CLOSE_HANDLE;
@@ -94,11 +94,11 @@ unwrap_WRITE_ON_CLOSE_HANDLE(WRITE_ON_CLOSE_HANDLE h)
 #define null_WRITE_ON_CLOSE_HANDLE() wrap_WRITE_ON_CLOSE_HANDLE(0)
 #define is_null_WRITE_ON_CLOSE_HANDLE(h) ((h).__h == 0)
 
-XS2_API WRITE_ON_CLOSE_HANDLE WINAPI xs2_write_on_close(struct xs2_handle *xih,
+XSPVDRIVER_API WRITE_ON_CLOSE_HANDLE WINAPI XSPVDriver_write_on_close(struct XSPVDriver_handle *xih,
                                                         const char *path,
                                                         const void *data,
                                                         size_t data_size);
-XS2_API void WINAPI xs2_cancel_write_on_close(struct xs2_handle *xih,
+XSPVDRIVER_API void WINAPI XSPVDriver_cancel_write_on_close(struct XSPVDriver_handle *xih,
                                               WRITE_ON_CLOSE_HANDLE handle);
 #endif
 

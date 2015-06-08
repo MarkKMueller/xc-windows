@@ -37,7 +37,7 @@
 #include "vm_stats.h"
 #include "NicInfo.h"
 
-#include "xs2.h"
+#include "XenPVDAccessor.h"
 #include "xs_private.h"
 #include "verinfo.h"
 #include "messages.h"
@@ -333,7 +333,7 @@ AddSystemInfoToStore(
 
 struct watch_event {
     HANDLE event;
-    struct xs2_watch *watch;
+    struct XSPVDriver_watch *watch;
 };
 
 static void
@@ -528,7 +528,7 @@ void ServiceUninstall()
          if (v) {
              int cnt = atoi(v);
              XenstorePrintf("data/update_cnt", "%d", cnt + 1);
-             xs2_free(v);
+             XSPVDriver_free(v);
          }
       }
       else
@@ -740,7 +740,7 @@ static void maybeReboot(void *ctx)
 	}
 
 out:
-	xs2_free(shutdown_type);
+        XSPVDriver_free(shutdown_type);
 }
 
 static
@@ -821,7 +821,7 @@ FetchRexecBinary(void)
         }
         XenstoreRemove("control/rexec_chunk");
         if (chunk_len == 0) {
-            xs2_free(chunk);
+            XSPVDriver_free(chunk);
             break;
         }
         off_in_chunk = 0;
@@ -836,7 +836,7 @@ FetchRexecBinary(void)
             }
             off_in_chunk += bytes_this_time;
         }
-        xs2_free(chunk);
+        XSPVDriver_free(chunk);
     }
     CloseHandle(h);
     return res;
@@ -1015,7 +1015,7 @@ processRexec(void *ctx)
 
 clean:
     if (cmd != NULL) {
-        xs2_free(cmd);
+        XSPVDriver_free(cmd);
     }
     if (path != NULL) {
         DeleteFile(path);
@@ -1088,10 +1088,10 @@ clean:
         CloseHandle(h);
     }
     if (path != NULL) {
-        xs2_free(path);
+        XSPVDriver_free(path);
     }
     if (data != NULL) {
-        xs2_free(data);
+        XSPVDriver_free(data);
     }
 }
 
@@ -1147,20 +1147,20 @@ refreshStoreData(WMIAccessor *wmi, NicInfo *nicInfo,
         AdvertiseFeatures(wfs);
         need_kick = 1;
     } else {
-        xs2_free(buffer);
+        XSPVDriver_free(buffer);
     }
 
     if (XenstoreRead("data/meminfo_free", &buffer) < 0) {
         cntr = 0;
         last_meminfo_free = 0;
     } else {
-        xs2_free(buffer);
+        XSPVDriver_free(buffer);
     }
 
     if (XenstoreRead("data/ts", &buffer) < 0) {
         cntr = 0;
     } else {
-        xs2_free(buffer);
+        XSPVDriver_free(buffer);
     }
 
     /* XXX HACK: Restrict ourselves to only doing this once every two
@@ -1214,7 +1214,7 @@ processDumpLog(void *ctx)
 
     do_it = 0;
     if (XenstoreRead("control/dumplog", &val) >= 0) {
-        xs2_free(val);
+        XSPVDriver_free(val);
         do_it = 1;
     } else if (GetLastError() != ERROR_FILE_NOT_FOUND)
         do_it = 1;
