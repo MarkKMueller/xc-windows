@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include "v2vapp.h"
-#include "XenPVDAccessor.h"
+#include "XenPVDAccess.h"
 #include "v2v.h"
 
 /************************** GENERAL **************************/
@@ -137,18 +137,16 @@ V2vFreeCancelState(V2V_CANCEL_STATE *cs)
 static BOOL
 V2vTestCancelState(V2V_CANCEL_STATE *cs)
 {
-    char *val;
     BOOL rc = TRUE;
+    char returnBuffer[256];
 
-    val = XSPVDriver_read(cs->XSPVDriver, cs->watchPath, NULL);
-    if (val == NULL) {
+    if (FALSE == XSPVDriver_read(cs->XSPVDriver, cs->watchPath, sizeof(returnBuffer), returnBuffer)) {
         printf("V2VAPP-CANCEL failed to read cancel value; returning cancel now.\n");
         return TRUE;
     }
-    if (strcmp(val, "0") == 0)
+    if (strcmp(returnBuffer, "0") == 0)
         rc = FALSE;
 
-    XSPVDriver_free(val);
     return rc;
 }
 

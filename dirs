@@ -1,7 +1,7 @@
 DIRS=removedev \
      xenutil \
      xenevtchn \
-     net \
+#     net \
      wnet \
      xenvbd \
      xenuser \

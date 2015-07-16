@@ -32,7 +32,7 @@
 #include "XSAccessor.h"
 #include <winsock2.h>
 #include <Iphlpapi.h>
-#include <XenPVDAccessor.h>
+#include <XenPVDAccess.h>
 
 NicInfo::NicInfo() : netif_data(NULL), nr_netifs_found(0)
 {
@@ -105,11 +105,10 @@ void NicInfo::GetNicInfo()
     //
     for (entry = 0; entry < numEntries; entry++) {
         netif_data[entry].ethnum = atoi(vifEntries[entry]); 
-        char* macAddress;
+        char macAddress[256];
         sprintf(vifNode, "device/vif/%s/mac", vifEntries[entry]);
-        if (XenstoreRead(vifNode, &macAddress) != -1) {
+        if (false != XenstoreRead(vifNode, sizeof(macAddress), macAddress)) {
             lstrcpyn(netif_data[entry].mac, macAddress, sizeof(netif_data[entry].mac));
-            XSPVDriver_free(macAddress);
         }
     }
 

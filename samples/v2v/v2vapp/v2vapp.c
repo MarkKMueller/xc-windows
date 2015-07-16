@@ -26,7 +26,7 @@
 #include <conio.h>
 #include <rpc.h>
 #include "v2vapp.h"
-#include "XenPVDAccessor.h"
+#include "XenPVDAccess.h"
 
 #define V2V_CONFIG_BUFFER_SIZE 1024
 
@@ -172,8 +172,9 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
     ULONG error = ERROR_SUCCESS;
     struct XSPVDriver_handle *XSPVDriver = NULL;
     char *path = NULL;
-    char *remote = NULL;
+    char remote[256];
     char *peer = NULL;
+    BOOL readResult;
 
     do {
         XSPVDriver = XSPVDriver_open();
@@ -183,7 +184,8 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
             break;
         }
 
-        path = (char*)malloc(strlen(vac->localPrefix) + V2V_EXTRA_BUF);
+        const unsigned path_length = strlen(vac->localPrefix) + V2V_EXTRA_BUF;
+        path = (char*)malloc(path_length);
         if (!path) {
             printf("V2VAPP out of memory\n");
             error = ERROR_OUTOFMEMORY;
@@ -191,8 +193,8 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
         }
         strcpy(path, vac->localPrefix);
         strcat(path, "/backend");
-        remote = (char*)XSPVDriver_read(XSPVDriver, path, NULL);
-        if ((!remote)||(strlen(remote) == 0)) {
+        readResult = XSPVDriver_read(XSPVDriver, path, sizeof(remote), remote);
+        if (FALSE == readResult || (strlen(remote) == 0)) {
             printf("V2VAPP could not find backend prefix in xenstore - error: 0x%x\n", GetLastError());
             error = ERROR_GEN_FAILURE;
             break;
@@ -200,8 +202,8 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
 
         strcpy(path, vac->localPrefix);
         strcat(path, "/peer-domid");
-        peer = (char*)XSPVDriver_read(XSPVDriver, path, NULL);
-        if ((!peer)||(strlen(peer) == 0)) {
+        readResult = XSPVDriver_read(XSPVDriver, path, sizeof(peer), peer);
+        if (FALSE == readResult || (strlen(peer) == 0)) {
             printf("V2VAPP could not find peer domain id in xenstore - error: 0x%x\n", GetLastError());
             error = ERROR_GEN_FAILURE;
             break;
@@ -209,10 +211,6 @@ V2vXenstoreCheck(V2V_APP_CONFIG *vac)
         printf("V2VAPP xenstore values - backend: %s  peer-domid: %s\n", remote, peer);
     } while (0);
     
-    if (peer)
-        XSPVDriver_free(peer);
-    if (remote)
-        XSPVDriver_free(remote);
     if (path)
         free(path);
     if (XSPVDriver)

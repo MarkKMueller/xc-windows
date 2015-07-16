@@ -40,7 +40,7 @@ TARGETLIBS=\
     $(SDK_LIB_PATH)\user32.lib   \
     $(SDK_LIB_PATH)\uuid.lib     \
 	$(SDK_LIB_PATH)\rpcrt4.lib   \
-	$(TARGETPATH)\*\XenPVDAccessor.lib      \
+	$(TARGETPATH)\*\XenPVDAccess.lib      \
 	$(TARGETPATH)\*\xenv2v.lib
         
 SOURCES= \

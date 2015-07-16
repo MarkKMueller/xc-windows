@@ -69,13 +69,13 @@ XSUTIL_API char *WINAPI xs_vassemble_strings(const char *sep, va_list *args);
 XSUTIL_API char *WINAPI xs_assemble_strings(const char *sep, ...);
 
 #ifdef XSPVDRIVER_API
-XSPVDRIVER_API int WINAPI XSPVDriver_listen_suspend(HANDLE hXS, HANDLE event);
-XSPVDRIVER_API BOOL WINAPI XSPVDriver_unlisten_suspend(HANDLE hXS);
-XSPVDRIVER_API void WINAPI XSPVDriver_get_xen_time(HANDLE hXS, FILETIME *out);
-XSPVDRIVER_API void WINAPI XSPVDriver_make_precious(HANDLE hXS);
-XSPVDRIVER_API void WINAPI XSPVDriver_unmake_precious(HANDLE hXS);
-XSPVDRIVER_API void WINAPI XSPVDriver_log(HANDLE hXS, const char *fmt, ...);
-XSPVDRIVER_API void WINAPI XSPVDriver_vlog(HANDLE hXS, const char *fmt, va_list args);
+XSPVDRIVER_API int WINAPI XSPVDriver_listen_suspend(void *hXS, HANDLE event);
+XSPVDRIVER_API BOOL WINAPI XSPVDriver_unlisten_suspend(void *hXS);
+XSPVDRIVER_API void WINAPI XSPVDriver_get_xen_time(void *hXS, FILETIME *out);
+XSPVDRIVER_API void WINAPI XSPVDriver_make_precious(void *hXS);
+XSPVDRIVER_API void WINAPI XSPVDriver_unmake_precious(void *hXS);
+XSPVDRIVER_API void WINAPI XSPVDriver_log(void *hXS, const char *fmt, ...);
+XSPVDRIVER_API void WINAPI XSPVDriver_vlog(void *hXS, const char *fmt, va_list args);
 typedef struct {
     ULONG64 __h;
 } WRITE_ON_CLOSE_HANDLE;
@@ -94,11 +94,11 @@ unwrap_WRITE_ON_CLOSE_HANDLE(WRITE_ON_CLOSE_HANDLE h)
 #define null_WRITE_ON_CLOSE_HANDLE() wrap_WRITE_ON_CLOSE_HANDLE(0)
 #define is_null_WRITE_ON_CLOSE_HANDLE(h) ((h).__h == 0)
 
-XSPVDRIVER_API WRITE_ON_CLOSE_HANDLE WINAPI XSPVDriver_write_on_close(struct XSPVDriver_handle *xih,
+XSPVDRIVER_API WRITE_ON_CLOSE_HANDLE WINAPI XSPVDriver_write_on_close(void *xih,
                                                         const char *path,
                                                         const void *data,
                                                         size_t data_size);
-XSPVDRIVER_API void WINAPI XSPVDriver_cancel_write_on_close(struct XSPVDriver_handle *xih,
+XSPVDRIVER_API void WINAPI XSPVDriver_cancel_write_on_close(void *,
                                               WRITE_ON_CLOSE_HANDLE handle);
 #endif
 

@@ -31,7 +31,7 @@
 #include "xs.h"
 #include "xs_private.h"
 
-/* Don't include XenPVDAccessor.h.  We're not allowed to directly call any
+/* Don't include XenPVDAccess.h.  We're not allowed to directly call any
    functions which it exports, because of the stupid Windows linking
    rules. */
 
@@ -50,20 +50,20 @@ struct XSPVDriver_interface {
     BOOL (WINAPI *XSPVDriver_transaction_start)(struct XSPVDriver_handle *h);
     void (WINAPI *XSPVDriver_transaction_abort)(struct XSPVDriver_handle *handle);
     BOOL (WINAPI *XSPVDriver_transaction_commit)(struct XSPVDriver_handle *handle);
-    void *(WINAPI *XSPVDriver_read)(HANDLE hXS, const char *path, size_t *len);
+    BOOL (WINAPI *XSPVDriver_read)(HANDLE hXS, const char *path, size_t len, char *returnBuffer);
     BOOL (WINAPI *XSPVDriver_write)(struct XSPVDriver_handle *handle, const char *path,
                       const char *data);
     BOOL (WINAPI *XSPVDriver_write_bin)(struct XSPVDriver_handle *handle, const char *path,
                                   const void *data, size_t size);
-    char **(WINAPI *XSPVDriver_directory)(struct XSPVDriver_handle *handle,
-                                    const char *path,
-                                    unsigned int *num);
+    BOOL (WINAPI *XSPVDriver_directory)(struct XSPVDriver_handle *handle,
+                                        const char *path,
+                                        size_t bufferByteCount,
+                                        char *resultBuffer);
     struct XSPVDriver_watch *(WINAPI *XSPVDriver_watch)(struct XSPVDriver_handle *handle,
                                            const char *path,
                                            HANDLE event);
     void (WINAPI *XSPVDriver_unwatch)(struct XSPVDriver_watch *watch);
     BOOL (WINAPI *XSPVDriver_remove)(HANDLE hXS, const char *path);
-    void (WINAPI *XSPVDriver_free)(const void *mem);
 };
 
 static HANDLE mainLock;
@@ -155,20 +155,22 @@ static struct XSPVDriver_interface *get_XSPVDriver_interface(void)
 #define f(name, s)                                                       \
     work->name = (void *)GetProcAddress(module, DECORATE(name, s) );     \
     if (!work->name) {                                                   \
+        OutputDebugStringA(__FUNCTION__); \
+        OutputDebugStringA(": function "); \
+        OutputDebugStringA(#name); \
+        OutputDebugStringA("not found.\n"); \
         goto err;                                                        \
     }
     f(XSPVDriver_close, 4);
     f(XSPVDriver_transaction_start, 4);
     f(XSPVDriver_transaction_abort, 4);
     f(XSPVDriver_transaction_commit, 4);
-    f(XSPVDriver_read, 12);
+    f(XSPVDriver_read, 16);
     f(XSPVDriver_write, 12);
-    f(XSPVDriver_write_bin, 16);
-    f(XSPVDriver_directory, 12);
+    f(XSPVDriver_directory, 16);
     f(XSPVDriver_watch, 12);
     f(XSPVDriver_unwatch, 4);
     f(XSPVDriver_remove, 8);
-    f(XSPVDriver_free, 4);
 #undef f
 #undef DECORATE
 #pragma warning(pop)
@@ -215,23 +217,22 @@ BOOL xs_transaction_end(HANDLE _xih, BOOL fAbort)
    the XSPVDriver heap into the CRT heap. */
 void *xs_read(HANDLE _xih, const char *path, size_t *len)
 {
-    void *res;
+    char res[256];
     void *res2;
     size_t len2;
 
     if (len)
         *len = 0;
-    res = XSPVDriver_interface->XSPVDriver_read(_xih, path, &len2);
-    if (res) {
+
+    if (XSPVDriver_interface->XSPVDriver_read(_xih, path, sizeof(res), res)) {
+        len2 = strlen(res);
         res2 = malloc(len2 + 1);
         if (!res2) {
-            XSPVDriver_interface->XSPVDriver_free(res);
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
             return NULL;
         }
         memcpy(res2, res, len2);
         ((char *)res2)[len2] = 0;
-        XSPVDriver_interface->XSPVDriver_free(res);
         if (len)
             *len = len2;
         return res2;
@@ -245,11 +246,12 @@ BOOL xs_remove( HANDLE _xih, const char *path)
     return XSPVDriver_interface->XSPVDriver_remove(_xih, path);
 }
 
-BOOL xs_write_bin(HANDLE _xih, const char *path, const void *data,
-                  size_t data_len)
-{
-    return XSPVDriver_interface->XSPVDriver_write_bin(_xih, path, data, data_len);
-}
+// write_bin has been depricated
+//BOOL xs_write_bin(HANDLE _xih, const char *path, const void *data,
+//                  size_t data_len)
+//{
+//    return XSPVDriver_interface->XSPVDriver_write_bin(_xih, path, data, data_len);
+//}
 
 BOOL xs_write(HANDLE xih, const char *path, const char *data )
 {
@@ -258,43 +260,77 @@ BOOL xs_write(HANDLE xih, const char *path, const char *data )
 
 char **xs_directory(HANDLE _xih, const char *path, unsigned int *num)
 {
-    char **XSPVDriver_res;
-    char **crt_res;
-    unsigned XSPVDriver_num;
+    unsigned bufferByteCount = 512;
+    char *resultBuffer;
+    char *resultOffset;
+    unsigned count = 0;
+    char **current_result;
     unsigned x;
 
-    if (num)
-        *num = 0;
+    do {
+        int errorCode;
+        resultBuffer = malloc(bufferByteCount);
+        if (0 == resultBuffer) {
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            return 0;
+        }
 
-    XSPVDriver_res = XSPVDriver_interface->XSPVDriver_directory(_xih, path, &XSPVDriver_num);
-    if (!XSPVDriver_res)
-        return NULL;
+        if (XSPVDriver_interface->XSPVDriver_directory(_xih, path, sizeof(resultBuffer), resultBuffer)) {
+            break;
+        }
+        free(resultBuffer);
+        errorCode = GetLastError();
+        if (ERROR_INSUFFICIENT_BUFFER == errorCode) {
+            bufferByteCount += 512;
+            if (MAX_PATH * 100 < bufferByteCount) {
+                SetLastError(errorCode);
+                return 0;
+            }
+        }
+        else {
+            SetLastError(errorCode);
+            return 0;
+        }
+    } while (1);
 
-    crt_res = calloc(XSPVDriver_num, sizeof(crt_res[0]));
-    if (!crt_res)
-        goto no_memory;
-    for (x = 0; x < XSPVDriver_num; x++) {
-        crt_res[x] = malloc(strlen(XSPVDriver_res[x]) + 1);
-        if (!crt_res[x])
-            goto no_memory;
-        strcpy(crt_res[x], XSPVDriver_res[x]);
-        XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res[x]);
-        XSPVDriver_res[x] = NULL;
+    // Count the number of entries in the list by detecting a double null termination
+    resultOffset = resultBuffer;
+    count = 0;
+    do {
+        resultOffset = &resultOffset[strlen(resultOffset) + 2];
+        count++;
+    } while (*resultOffset);
+
+    // Create an array of pointers that will point to the strings for the directory listing.
+    current_result = calloc(count, sizeof(current_result[0]));
+    if (!current_result) {
+        free(resultBuffer);
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return 0;
     }
-    XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res);
-    if (num)
-        *num = XSPVDriver_num;
-    return crt_res;
 
-no_memory:
-    for (x = 0; x < XSPVDriver_num; x++) {
-        xs_free(crt_res[x]);
-        XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res[x]);
+    // Allocate memory for each directory list string, and copy the directory info.
+    resultOffset = resultBuffer;
+    for (x = 0; x < count; x++) {
+        const size_t charCount = strlen(resultOffset);
+        current_result[x] = malloc(charCount + 1);
+        if (!current_result[x]) {
+            while ((x--)) {
+                free(current_result[x]);
+            }
+            free(current_result);
+            free(resultBuffer);
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            return 0;
+        }
+        strcpy(current_result[x], resultOffset);
+        resultOffset += charCount + 2;
     }
-    xs_free(crt_res);
-    XSPVDriver_interface->XSPVDriver_free(XSPVDriver_res);
-    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-    return NULL;
+
+    free(resultBuffer);
+    if (num)
+        *num = count;
+    return current_result;
 }
 
 int xs_watch(HANDLE _xih, const char *path, HANDLE event)

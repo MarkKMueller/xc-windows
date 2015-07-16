@@ -16,20 +16,20 @@ Import-Module $ScriptDir\..\BuildSupport\checked-copy.psm1
 function sign ($arch, $name) { 
     Write-Host "signing with [$certname] crosssign [$crosssign]"
     if ($crosssign) {
-        Invoke-CommandChecked "$arch signtool " ($signtool+"\signtool.exe") sign /v /a /s my /n ('"'+$certname+'"') /t http://timestamp.verisign.com/scripts/timestamp.dll /ac $crosssign $name 
+        Invoke-CommandChecked "$arch signtool " ($signtool+"\signtool.exe") sign /v /a /s my /n ('"'+$certname+'"') /t http://timestamp.verisign.com/scripts/timestamp.dll /ac $crosssign $name
     } else {
-        Invoke-CommandChecked "$arch signtool " ($signtool+"\signtool.exe") sign /v /a /s my /n ('"'+$certname+'"') /t http://timestamp.verisign.com/scripts/timestamp.dll  $name 
+        Invoke-CommandChecked "$arch signtool " ($signtool+"\signtool.exe") sign /v /a /s my /n ('"'+$certname+'"') /t http://timestamp.verisign.com/scripts/timestamp.dll  $name
     }
 }
 
 foreach ($arch in @("amd64", "i386")) {
     if ($arch -eq "i386") {
         $workd = "sign32"
-	$oslist = "/os:2000,XP_X86,Server2003_X86,Vista_X86,Server2008_X86"
+        $oslist = "/os:7_X86"
 	$vusb_arch = "x86" # TODO: use the same build directory name on xc-vusb to avoid needing to handle it separately heere
     } else {
         $workd = "sign64"
-	$oslist = "/os:XP_X64,Server2003_X64,Vista_X64,Server2008_X64"
+        $oslist = "/os:7_X64"
 	$vusb_arch = "x64"
     }
     # TODO: make this work incrementally. For now we just delete the siging directory tree

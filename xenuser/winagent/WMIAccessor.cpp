@@ -36,7 +36,7 @@
 #include "WMIAccessor.h"
 #include "XService.h"
 #include "NicInfo.h"
-#include <XenPVDAccessor.h>
+#include <XenPVDAccess.h>
 
 #include "xs_private.h"
 

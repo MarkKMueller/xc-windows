@@ -631,21 +631,8 @@ ${Endif}
     File ${SIGN_PREFIX}\xenvusb.inf
     File ${SIGN_PREFIX}\WdfCoInstaller01009.dll
 
-    File ${SIGN_PREFIX}\xevtchn.sys
-    File ${SIGN_PREFIX}\xevtchn.inf
-    File /nonfatal ${SIGN_PREFIX}\xevtchn.cat
-
-    File ${SIGN_PREFIX}\xenvbd.sys
-    File ${SIGN_PREFIX}\scsifilt.sys
-    File /nonfatal ${SIGN_PREFIX}\xenvbd.cat
-    File ${SIGN_PREFIX}\xenvbd.inf
-
-    File ${SIGN_PREFIX}\xennet.sys
-    File ${SIGN_PREFIX}\xennet6.sys
     File ${SIGN_PREFIX}\xenwnet.sys
     File ${SIGN_PREFIX}\xenwnet6.sys
-    File ${SIGN_PREFIX}\xennet.inf
-    File /nonfatal ${SIGN_PREFIX}\xennet.cat
     File ${SIGN_PREFIX}\xenwnet.inf
     File /nonfatal ${SIGN_PREFIX}\xenwnet.cat
 	File /nonfatal ${SIGN_PREFIX}\xenaud.cat
@@ -696,8 +683,8 @@ ${EndIf}
 !endif
     File /oname=xsutil.new ${BUILD_PREFIX}\xsutil.dll
     Rename /REBOOTOK xsutil.new xsutil.dll
-    File /oname=xs2.new ${BUILD_PREFIX}\xs2.dll
-    Rename /REBOOTOK xs2.new xs2.dll
+    File /oname=XenPVDAccess.new ${BUILD_PREFIX}\XenPVDAccess.dll
+    Rename /REBOOTOK XenPVDAccess.new XenPVDAccess.dll
 
     File ${BUILD_PREFIX}\removedev.exe
     File ${BUILD_PREFIX}\sync.exe
@@ -716,21 +703,8 @@ ${EndIf}
     File ${SIGN_PREFIX_64}\xenvusb.inf
     File ${SIGN_PREFIX_64}\WdfCoInstaller01009.dll
 	
-    File ${SIGN_PREFIX_64}\xevtchn.sys
-    File ${SIGN_PREFIX_64}\xevtchn.inf 
-    File /nonfatal ${SIGN_PREFIX_64}\xevtchn.cat
-
-    File ${SIGN_PREFIX_64}\xenvbd.sys
-    File ${SIGN_PREFIX_64}\scsifilt.sys
-    File ${SIGN_PREFIX_64}\xenvbd.inf
-    File /nonfatal ${SIGN_PREFIX_64}\xenvbd.cat
-
-    File ${SIGN_PREFIX_64}\xennet.sys
-    File ${SIGN_PREFIX_64}\xennet6.sys
     File ${SIGN_PREFIX_64}\xenwnet.sys
     File ${SIGN_PREFIX_64}\xenwnet6.sys
-    File ${SIGN_PREFIX_64}\xennet.inf
-    File /nonfatal ${SIGN_PREFIX_64}\xennet.cat
     File ${SIGN_PREFIX_64}\xenwnet.inf
     File /nonfatal ${SIGN_PREFIX_64}\xenwnet.cat
 	File /nonfatal ${SIGN_PREFIX_64}\xenaud.cat
@@ -782,11 +756,11 @@ ${EndIf}
     File /oname=xsutil.new ${BUILD_PREFIX64}\xsutil.dll
     Rename /REBOOTOK xsutil.new xsutil.dll
 
-    File /oname=xs2.new ${BUILD_PREFIX64}\xs2.dll
-    Rename /REBOOTOK xs2.new xs2.dll
+    File /oname=XenPVDAccess.new ${BUILD_PREFIX64}\XenPVDAccess.dll
+    Rename /REBOOTOK XenPVDAccess.new XenPVDAccess.dll
 
-    File /oname=xs2-32.new ${BUILD_PREFIX}\xs2.dll
-    Rename /REBOOTOK xs2-32.new xs2_32.dll
+    File /oname=XenPVDAccess-32.new ${BUILD_PREFIX}\XenPVDAccess.dll
+    Rename /REBOOTOK XenPVDAccess-32.new XenPVDAccess_32.dll
 
     File ${BUILD_PREFIX64}\xenstore_client.exe
     File ${BUILD_PREFIX64}\removedev.exe
@@ -802,11 +776,11 @@ ${EndIf}
   ${LogText} "File copy done."
 
   ${If} "$IsAmd64" == "yes"
-    StrCpy "$1" "$INSTDIR\xs2.dll"
+    StrCpy "$1" "$INSTDIR\XenPVDAccess.dll"
     System::Call "install::SetXSdllRegKey(t r1)"
-    WriteRegStr HKLM Software\Citrix\XenTools "xs2.dll" $INSTDIR\xs2_32.dll  
+    WriteRegStr HKLM Software\Citrix\XenTools "XenPVDAccess.dll" $INSTDIR\XenPVDAccess_32.dll
   ${Else}
-    WriteRegStr HKLM Software\Citrix\XenTools "xs2.dll" $INSTDIR\xs2.dll
+    WriteRegStr HKLM Software\Citrix\XenTools "XenPVDAccess.dll" $INSTDIR\XenPVDAccess.dll
   ${EndIf}
 
   ${If} $R0 == "New"
@@ -890,9 +864,6 @@ NoPVBoot:
 InstallINFs:
   ${LogText} "Installing INF files..."
   ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xeninp.inf"' $0
-  ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xevtchn.inf"' $0
-  ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenvbd.inf"' $0
-  ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xennet.inf"' $0
   ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenwnet.inf"' $0
   ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenaud.inf"' $0
   
@@ -928,17 +899,6 @@ ${EndIf}
   IfErrors error
   IntCmp "$0" 0 0 error
   
-  System::Call '${myFindExistingDevice}?e ("root\xenevtchn") .r0'
-  ${If} $0 = 1
-    ${LogText} "Upgrading xenbus root driver..."
-    DetailPrint "Upgrading xenbus root driver..."
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "root\xenevtchn" "$INSTDIR\xevtchn.inf" "1"' $0
-  ${else}
-    ${LogText} "Installing xenbus root driver..."
-    DetailPrint "Installing xenbus root driver..."
-    ExecWait '"$TEMP\installdriver.exe" "/r" "$HWNDPARENT" "root\xenevtchn" "$INSTDIR\xevtchn.inf"' $0
-  ${endif}
-  
   ${If} "$OsType" == "7" 
   ${OrIf} "$OsType" == "8" 
     ${If} $R0 == "New"
@@ -951,31 +911,6 @@ ${EndIf}
   IfErrors error
   IntCmp "$0" 0 0 error
 
-  # scsiport defaults to a stupidly small queue size.  Crank it up to the
-  # maximum.  This will be ignored if we happen to be using storport, but
-  # setting it is harmless.
-  WriteRegDWORD HKLM "SYSTEM\CurrentControlSet\Services\xenvbd\parameters\Device0" "NumberOfRequests" 254
-
-  ${LogText} "Installing xenvbd driver..."
-  DetailPrint "Installing xenvbd driver..."
-  ${If} $R0 == "New"
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "$PciDeviceName" "$INSTDIR\xenvbd.inf" "0"' $0
-  ${else}
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "$PciDeviceName" "$INSTDIR\xenvbd.inf" "1"' $0
-  ${endif}
-  IfErrors error
-  IntCmp "$0" 0 0 error
-
-  ${LogText} "Installing xennet driver..."
-  DetailPrint "Installing xennet driver..."
-  ${If} $R0 == "New"
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "XEN\vif" "$INSTDIR\xennet.inf" "0"' $0
-  ${else}
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "XEN\vif" "$INSTDIR\xennet.inf" "1"' $0
-  ${endif}
-  IfErrors error
-  IntCmp "$0" 0 0 error
-  
   ${LogText} "Installing xenwnet driver..."
   DetailPrint "Installing xenwnet driver..."
   ${If} $R0 == "New"
@@ -1031,14 +966,6 @@ ${EndIf}
     IntCmp "$0" 0 0 error
   ${EndIf}
   
-  ${If} $IsNativeWindows == "yes"
-    # Preinstall our disk drivers.  This is used when our drivers are installed in a non Xen
-    # environment, like on real hardware, so our disk driver can be used on the initial boot.
-    ExecWait '"$TEMP\installdriver.exe" "/d" "$HWNDPARENT" "$INSTDIR\xenvbd.inf" "xenvbd_inst" "xenvbd_inst.services"' $0
-    WriteRegStr HKLM ${REG_XENVBDCDDB_PATH} "Service" "xenvbd"
-    WriteRegStr HKLM ${REG_XENVBDCDDB_PATH} "ClassGUID" "{4D36E97B-E325-11CE-BFC1-08002BE10318}"
-  ${endif}
-
   # Check if the ServicesPipeTimeout is set for the machine
   ReadRegDWORD $InitialServicesPipeTimeout HKLM "SYSTEM\CurrentControlSet\Control" "ServicesPipeTimeout"
   IfErrors ChangeServicesPipeTimeout
@@ -1116,19 +1043,9 @@ DoneCheckingServicesTimeout:
       Delete /REBOOTOK $UpgradingFromPath\install.dll
       Delete /REBOOTOK $UpgradingFromPath\install.log
       Delete /REBOOTOK $UpgradingFromPath\sync.exe
-      Delete /REBOOTOK $UpgradingFromPath\xennet.inf
-      Delete /REBOOTOK $UpgradingFromPath\xennet.sys
-      Delete /REBOOTOK $UpgradingFromPath\xennet6.sys
-      Delete /REBOOTOK $UpgradingFromPath\xennet.cat
 !ifndef NO_INSTALL_XENSERVICE
       Delete /REBOOTOK $UpgradingFromPath\xenservice.exe
 !endif
-      Delete /REBOOTOK $UpgradingFromPath\xenvbd.inf
-      Delete /REBOOTOK $UpgradingFromPath\xenvbd.sys
-      Delete /REBOOTOK $UpgradingFromPath\xenvbd.cat
-      Delete /REBOOTOK $UpgradingFromPath\xevtchn.inf
-      Delete /REBOOTOK $UpgradingFromPath\xevtchn.sys
-      Delete /REBOOTOK $UpgradingFromPath\xevtchn.cat
       Delete /REBOOTOK $UpgradingFromPath\xenutil.sys
       Delete /REBOOTOK $UpgradingFromPath\xs.dll
       Delete /REBOOTOK $UpgradingFromPath\xsutil.dll      
@@ -1214,9 +1131,6 @@ Section "Uninstall"
   ${UnLogText} "Uninstall failed, must be called internally from the installer!"
   Goto end_uninstall 
   okUninstall:
-  ${UnLogText} "Uninstalling..."
-  # Remove scsifilt
-  ExecWait '"rundll32.exe" "setupapi.dll,InstallHinfSection uninstall 128 $INSTDIR\xenvbd.inf"'
 
   # If something has been stored, then handle it else remove key and exit.
   ReadRegDWORD $InitialServicesPipeTimeout HKLM "SOFTWARE\Citrix\XenTools" "ServicesPipeTimeout"
@@ -1251,15 +1165,6 @@ providerNotInstalled:
   System::Call 'kernel32::GetSystemDirectoryA(t .r0, *i r1r1) i .r2'
   StrCpy $REALSYSDIR $0
 
-  # remove the driver devnode, files, infs...etc
-  ExecWait '"$INSTDIR\removedev.exe" "/d" "XEN\vif"' $0
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xennet
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xennet6
-  Delete /REBOOTOK $REALSYSDIR\drivers\xennet.sys
-  Delete /REBOOTOK $REALSYSDIR\drivers\xennet6.sys
-  Push "XEN\vif"
-  Call un.DeleteInstalledOemInf
-  
   # remove the driver devnode, files, infs...etc
   ExecWait '"$INSTDIR\removedev.exe" "/d" "XEN\vwif"' $0
   DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenwnet
@@ -1318,26 +1223,6 @@ ${EndIf}
     Call un.DeleteInstalledOemInf
     
 
-  ExecWait '"$INSTDIR\removedev.exe" "/f" "{4D36E967-E325-11CE-BFC1-08002BE10318}" "LowerFilters" "scsifilt"' $0
-  ExecWait '"$INSTDIR\removedev.exe" "/d" "PCI\VEN_5853&DEV_0001&SUBSYS_00015853"' $0
-  ExecWait '"$INSTDIR\removedev.exe" "/d" "PCI\VEN_5853&DEV_0001"' $0
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenvbd
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Control\CriticalDeviceDatabase\pci#ven_5853&dev_0001&subsys_00015853
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Control\CriticalDeviceDatabase\pci#ven_5853&dev_0001
-  Delete /REBOOTOK $REALSYSDIR\drivers\xenvbd.sys
-  Delete /REBOOTOK $REALSYSDIR\drivers\scsifilt.sys
-  Push "PCI\VEN_5853&DEV_0001&SUBSYS_00015853"
-  Call un.DeleteInstalledOemInf
-	Push "PCI\VEN_5853&DEV_0001"
-	Call un.DeleteInstalledOemInf
-
-  ExecWait '"$INSTDIR\removedev.exe" "/d" "root\xenevtchn"' $0
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenevtchn
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\EventLog\System\xenevtchn
-  Delete /REBOOTOK $REALSYSDIR\drivers\xevtchn.sys
-  Push "ROOT\XENEVTCHN"
-  Call un.DeleteInstalledOemInf
-
   # We have a problem if Windows removes xenutil.sys before any of the
   # other services.  Make sure it doesn't.
   ExecWait '"$INSTDIR\sync.exe"'
@@ -1367,10 +1252,6 @@ ${EndIf}
   Delete /REBOOTOK $INSTDIR\install.dll
   Delete /REBOOTOK $INSTDIR\install.log
   Delete /REBOOTOK $INSTDIR\scsifilt.sys
-  Delete /REBOOTOK $INSTDIR\xennet.inf
-  Delete /REBOOTOK $INSTDIR\xennet.sys
-  Delete /REBOOTOK $INSTDIR\xennet6.sys
-  Delete /REBOOTOK $INSTDIR\xennet.cat
   Delete /REBOOTOK $INSTDIR\xenwnet.inf
   Delete /REBOOTOK $INSTDIR\xenwnet.sys
   Delete /REBOOTOK $INSTDIR\xenwnet6.sys
@@ -1415,17 +1296,11 @@ ${EndIf}
 !ifndef NO_INSTALL_XENSERVICE
   Delete /REBOOTOK $INSTDIR\xenservice.exe
 !endif
-  Delete /REBOOTOK $INSTDIR\xenvbd.inf
-  Delete /REBOOTOK $INSTDIR\xenvbd.sys
-  Delete /REBOOTOK $INSTDIR\xenvbd.cat
-  Delete /REBOOTOK $INSTDIR\xevtchn.inf
-  Delete /REBOOTOK $INSTDIR\xevtchn.sys
-  Delete /REBOOTOK $INSTDIR\xevtchn.cat
   Delete /REBOOTOK $INSTDIR\xenutil.sys
   Delete /REBOOTOK $INSTDIR\xs.dll
   Delete /REBOOTOK $INSTDIR\xsutil.dll
-  Delete /REBOOTOK $INSTDIR\xs2.dll
-  Delete /REBOOTOK $INSTDIR\xs2_32.dll
+  Delete /REBOOTOK $INSTDIR\XenPVDAccess.dll
+  Delete /REBOOTOK $INSTDIR\XenPVDAccess_32.dll
   RMDir /REBOOTOK $INSTDIR
   
   ${If} "$IsAmd64" == "no"

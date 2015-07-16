@@ -49,7 +49,7 @@
 */
 #include <windows.h>
 #include <stdlib.h>
-#include "XenPVDAccessor.h"
+#include "XenPVDAccess.h"
 #include "xs_private.h"
 #include "XService.h"
 
@@ -131,14 +131,12 @@ PushClipboardUpdate(const char *cb)
 static void
 ReportClipboardEvent(void)
 {
-    size_t size, bytes_this_time;
-    char *cur_value;
+    size_t bytes_this_time;
+    char cur_value[256];
 
     XsLogMsg("reporting a clipboard event");
-    cur_value = (char *)XSPVDriver_read(XsHandle, "data/report_clipboard", &size);
-    if (cur_value != NULL) {
+    if (FALSE == XSPVDriver_read(XsHandle, "data/report_clipboard", sizeof(cur_value), cur_value)) {
         /* qemu hasn't acked the previous message yet */
-        XSPVDriver_free(cur_value);
         return;
     }
     if (GetLastError() != ERROR_FILE_NOT_FOUND) {
@@ -163,9 +161,11 @@ ReportClipboardEvent(void)
         MIN(strlen(ReportClipboardState.data) - ReportClipboardState.offset,
             MAX_CHUNKSIZE);
     if (bytes_this_time != 0) {
-        XSPVDriver_write_bin(XsHandle, "data/report_clipboard",
-                     ReportClipboardState.data + ReportClipboardState.offset,
-                     bytes_this_time);
+        // MKM Jun 2015 - write_bin is no longer supported.
+        if (false == XSPVDriver_write(XsHandle, "data/report_clipboard",
+                     ReportClipboardState.data + ReportClipboardState.offset)) {
+            return;
+        }
         ReportClipboardState.offset += bytes_this_time;
     } else {
         FinishClipboardPush();
@@ -177,7 +177,7 @@ ReportClipboardEvent(void)
 static void
 SetClipboardEvent(HWND hwnd)
 {
-    char *this_chunk;
+    char this_chunk[256];
     size_t size;
     static HANDLE accumulated_clipboard;
     static size_t acc_clipboard_size;
@@ -189,8 +189,7 @@ SetClipboardEvent(HWND hwnd)
     /* Qemu just pushed in another chunk of update to the local
        clipboard.  Do something sensible with it. */
 
-    this_chunk = (char *)XSPVDriver_read(XsHandle, "data/set_clipboard", &size);
-    if (this_chunk == NULL) {
+    if (FALSE == XSPVDriver_read(XsHandle, "data/set_clipboard", sizeof(this_chunk))) {
         /* Probably a bogus watch firing before qemu set the value.
            Wait and try again later. */
         XsLogMsg("bogus watch event?");
@@ -221,7 +220,6 @@ SetClipboardEvent(HWND hwnd)
         if (new_acc == NULL) {
             XsLogMsg("No memory for clipboard accumulator buffer (%d)",
                      new_acc_buf_size);
-            XSPVDriver_free(this_chunk);
             return;
         }
         accumulated_clipboard = new_acc;
@@ -231,7 +229,6 @@ SetClipboardEvent(HWND hwnd)
     acc_clipboard = (char *)GlobalLock(accumulated_clipboard);
     if (!acc_clipboard) {
         DBGPRINT(("Failed to lock clipboard accumulation buffer"));
-        XSPVDriver_free(this_chunk);
         return;
     }
     memcpy(acc_clipboard + acc_clipboard_size,

@@ -24,7 +24,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <XenPVDAccessor.h>
+#include <XenPVDAccess.h>
 #include <xenops.h>
 #include <xs_private.h>
 
@@ -48,7 +48,7 @@ struct v2v_channel {
     struct XSPVDriver_watch *remote_state_watch;
     struct xenops_handle *xenops;
     char *local_prefix;
-    char *remote_prefix; /* XSPVDriver_free() */
+    char remote_prefix[256];
     DOMAIN_ID peer_domid;
     HANDLE control_event;
     HANDLE receive_event;
@@ -98,7 +98,6 @@ destroy_channel(const struct v2v_channel *_chan)
     if (chan->remote_state_watch)
         XSPVDriver_unwatch(chan->remote_state_watch);
     free(chan->local_prefix);
-    XSPVDriver_free(chan->remote_prefix);
     if (chan->XSPVDriver)
         XSPVDriver_close(chan->XSPVDriver);
     if (chan->control_event)
@@ -167,21 +166,40 @@ setup_crashed_on_crash(struct v2v_channel *chan)
 static BOOL
 read_peer_domid(struct v2v_channel *chan)
 {
-    char *s;
+    unsigned bufferByteCount = 256;
+    char *stringBuffer;
     long r;
     char *s2;
 
-    s = xenstore_readv_string(chan->XSPVDriver, chan->local_prefix, "peer-domid",
-                              NULL);
-    if (!s)
-        return FALSE;
-    r = strtol(s, &s2, 10);
+    do {
+        int errorCode;
+        stringBuffer = malloc(bufferByteCount);
+        if (0 == stringBuffer) {
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            return FALSE;
+        }
+
+        if (xenstore_readv_string(chan->XSPVDriver, sizeof(stringBuffer), stringBuffer, chan->local_prefix, "peer-domid")) {
+            break;
+        }
+        free(stringBuffer);
+        errorCode = GetLastError();
+        if (ERROR_INSUFFICIENT_BUFFER == errorCode) {
+            bufferByteCount += 256;
+        }
+        else {
+            SetLastError(errorCode);
+            return FALSE;
+        }
+    } while (1);
+
+    r = strtol(stringBuffer, &s2, 10);
     if (*s2 || r < 0 || r > 0xffff) {
-        XSPVDriver_free(s);
+        free(stringBuffer);
         SetLastError(ERROR_INVALID_DATA);
         return FALSE;
     }
-    XSPVDriver_free(s);
+    free(stringBuffer);
     chan->peer_domid = wrap_DOMAIN_ID(r);
     return TRUE;
 }
@@ -225,12 +243,13 @@ err:
 static BOOL
 connect_channel_xenbus(struct v2v_channel *chan)
 {
-    chan->remote_prefix = xenstore_readv_string(chan->XSPVDriver,
-                                                chan->local_prefix,
-                                                "backend",
-                                                NULL);
-    if (!chan->remote_prefix)
+    if (FALSE == xenstore_readv_string(chan->XSPVDriver,
+                                       sizeof(chan->remote_prefix),
+                                       chan->remote_prefix,
+                                       chan->local_prefix,
+                                       "backend")) {
         return FALSE;
+    }
     if (!read_peer_domid(chan))
         return FALSE;
     chan->remote_state_watch = xenstore_watchv(chan->XSPVDriver,
@@ -443,8 +462,6 @@ v2v_listen(const char *xenbus_prefix, struct v2v_channel **channel,
         chan->send_evtchn_port = null_EVTCHN_PORT();
         XSPVDriver_unwatch(chan->remote_state_watch);
         chan->remote_state_watch = NULL;
-        XSPVDriver_free(chan->remote_prefix);
-        chan->remote_prefix = NULL;
         cancel_crashed_on_crash(chan);
     }
 
@@ -462,30 +479,51 @@ err:
 enum v2v_endpoint_state
 v2v_get_remote_state(struct v2v_channel *channel)
 {
-    char *raw;
+    unsigned bufferByteCount = 256;
+    char *rawBuffer;
     enum v2v_endpoint_state res;
 
-    raw = xenstore_readv_string(channel->XSPVDriver,
-                                channel->remote_prefix,
-                                "state",
-                                NULL);
-    if (!raw)
-        return v2v_state_unknown;
-    if (!strcmp(raw, "unready"))
+    do {
+        int errorCode;
+        rawBuffer = malloc(bufferByteCount);
+        if (0 == rawBuffer) {
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            return FALSE;
+        }
+
+        if (xenstore_readv_string(channel->XSPVDriver,
+                                  sizeof(rawBuffer),
+                                  rawBuffer,
+                                  channel->remote_prefix,
+                                  "state")) {
+            break;
+        }
+        free(rawBuffer);
+        errorCode = GetLastError();
+        if (ERROR_INSUFFICIENT_BUFFER == errorCode) {
+            bufferByteCount += 256;
+        }
+        else {
+            SetLastError(errorCode);
+            return v2v_state_unknown;
+        }
+    } while (1);
+
+    if (!strcmp(rawBuffer, "unready"))
         res = v2v_state_unready;
-    else if (!strcmp(raw, "listening"))
+    else if (!strcmp(rawBuffer, "listening"))
         res = v2v_state_listening;
-    else if (!strcmp(raw, "connected"))
+    else if (!strcmp(rawBuffer, "connected"))
         res = v2v_state_connected;
-    else if (!strcmp(raw, "disconnecting"))
+    else if (!strcmp(rawBuffer, "disconnecting"))
         res = v2v_state_disconnecting;
-    else if (!strcmp(raw, "disconnected"))
+    else if (!strcmp(rawBuffer, "disconnected"))
         res = v2v_state_disconnected;
-    else if (!strcmp(raw, "crashed"))
+    else if (!strcmp(rawBuffer, "crashed"))
         res = v2v_state_crashed;
     else
         res = v2v_state_unknown;
-    XSPVDriver_free(raw);
+
     if (res == v2v_state_unknown)
         SetLastError(ERROR_INVALID_DATA);
     return res;

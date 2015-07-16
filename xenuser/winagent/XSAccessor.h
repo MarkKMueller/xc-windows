@@ -47,7 +47,7 @@ typedef long ssize_t;
 void InitXSAccessor();
 void ShutdownXSAccessor();
 int XenstoreList(const char *path, char ***entries, unsigned *numEntries);
-ssize_t XenstoreRead(const char *path, char **value);
+bool XenstoreRead(const char *path, size_t size, char *value);
 int XenstoreRemove(const char *path);
 int XenstorePrintf(const char *path, const char *fmt, ...);
 int XenstoreWrite(const char *path, const void *data, size_t len);

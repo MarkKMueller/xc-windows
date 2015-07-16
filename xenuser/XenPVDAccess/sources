@@ -1,0 +1,18 @@
+USERSPACE=1
+TOPDIR=..\..
+include ..\..\config.mk
+
+TARGETNAME=XenPVDAccess
+TARGETTYPE=DYNLINK
+
+TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
+$(SDK_LIB_PATH)\user32.lib $(SDK_LIB_PATH)\Setupapi.lib \
+
+NO_NTDLL=1
+USE_MSVCRT=1
+UMTYPE=windows
+
+DLLDEF=XenPVDAccess.def
+
+INCLUDES=$(INCLUDES);..\..\pvdrivers\win\xeniface\include
+SOURCES=XenPVDAccess.cpp XenPVDAccess.rc

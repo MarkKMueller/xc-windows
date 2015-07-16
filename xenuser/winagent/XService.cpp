@@ -37,7 +37,7 @@
 #include "vm_stats.h"
 #include "NicInfo.h"
 
-#include "XenPVDAccessor.h"
+#include "XenPVDAccess.h"
 #include "xs_private.h"
 #include "verinfo.h"
 #include "messages.h"
@@ -523,12 +523,10 @@ void ServiceUninstall()
          XenstorePrintf("attr/PVAddons/BuildVersion", "0");
 
          /* Crank the update number so xapi notices it. */
-         char *v;
-         XenstoreRead("data/update_cnt", &v);
-         if (v) {
+         char v[256];
+         if (XenstoreRead("data/update_cnt", sizeof(v), v)) {
              int cnt = atoi(v);
              XenstorePrintf("data/update_cnt", "%d", cnt + 1);
-             XSPVDriver_free(v);
          }
       }
       else
@@ -616,14 +614,12 @@ enum XShutdownType {
 
 static void maybeReboot(void *ctx)
 {
-	char *shutdown_type;
-	unsigned int len;
+        char shutdown_type[256];
 	BOOL res;
 	enum XShutdownType type;
-    int cntr = 0;
-    HANDLE eventLog;
+        HANDLE eventLog;
 
-	if (XenstoreRead("control/shutdown", &shutdown_type) < 0)
+        if (false == XenstoreRead("control/shutdown", sizeof(shutdown_type), shutdown_type))
 		return;
 	DBGPRINT(("Shutdown type %s\n", shutdown_type));
 	if (strcmp(shutdown_type, "poweroff") == 0 ||
@@ -769,7 +765,7 @@ FetchRexecBinary(void)
     TCHAR tempbuf[MAX_PATH];
     HANDLE h;
     ssize_t chunk_len;
-    char *chunk;
+    char chunk[256];
     ssize_t off_in_chunk;
     DWORD bytes_this_time;
 
@@ -806,8 +802,7 @@ FetchRexecBinary(void)
 
     /* Read the file in */
     while (1) {
-        chunk_len = XenstoreRead("control/rexec_chunk", &chunk);
-        if (chunk_len < 0) {
+        if (false == XenstoreRead("control/rexec_chunk", sizeof(chunk), chunk)) {
             if (GetLastError() == ERROR_FILE_NOT_FOUND) {
                 /* Wait for dom0 to give us the next chunk.  Rather
                    icky; the right answer would be to use a watch, but
@@ -821,7 +816,6 @@ FetchRexecBinary(void)
         }
         XenstoreRemove("control/rexec_chunk");
         if (chunk_len == 0) {
-            XSPVDriver_free(chunk);
             break;
         }
         off_in_chunk = 0;
@@ -836,7 +830,6 @@ FetchRexecBinary(void)
             }
             off_in_chunk += bytes_this_time;
         }
-        XSPVDriver_free(chunk);
     }
     CloseHandle(h);
     return res;
@@ -950,14 +943,14 @@ clean:
 static void
 processRexec(void *ctx)
 {
-    char *cmd = NULL;
+    char cmd[256];
     PROCESS_INFORMATION processInfo = {0};
     STARTUPINFO startInfo = {0};
     BOOL success;
     DWORD code;
     TCHAR *path = NULL;
 
-    if (XenstoreRead("control/rexec_cmdline", &cmd) < 0)
+    if (false == XenstoreRead("control/rexec_cmdline", sizeof(cmd), cmd))
         goto clean;
     DBGPRINT(("rexec %s\n", cmd));
     XenstoreRemove("control/rexec_cmdline");
@@ -1014,9 +1007,6 @@ processRexec(void *ctx)
     XenstorePrintf("control/rexec_res", "%d", code);
 
 clean:
-    if (cmd != NULL) {
-        XSPVDriver_free(cmd);
-    }
     if (path != NULL) {
         DeleteFile(path);
         free(path);
@@ -1028,8 +1018,8 @@ clean:
 static void
 processRsend(void *ctx)
 {
-    PTSTR path = NULL; 
-    PTSTR data = NULL;
+    char path[256];
+    char data[256];
     TCHAR expandedPath[MAX_PATH];
     DWORD err;
     int write_off;
@@ -1037,7 +1027,7 @@ processRsend(void *ctx)
     HANDLE h = INVALID_HANDLE_VALUE;
     ssize_t data_len;
 
-    if (XenstoreRead("control/rsend_path", &path) < 0)
+    if (false == XenstoreRead("control/rsend_path", strlen(path), path))
         goto clean;
 
     //
@@ -1053,8 +1043,7 @@ processRsend(void *ctx)
         goto clean;
     }
 
-    data_len = XenstoreRead("control/rsend_data", &data);
-    if (data_len < 0) {
+    if (false == XenstoreRead("control/rsend_data", strlen(data), data)) {
         PrintError("XenstoreRead(control/rsend_data)");
         goto clean;
     }
@@ -1086,12 +1075,6 @@ processRsend(void *ctx)
 clean:
     if (h != INVALID_HANDLE_VALUE) {
         CloseHandle(h);
-    }
-    if (path != NULL) {
-        XSPVDriver_free(path);
-    }
-    if (data != NULL) {
-        XSPVDriver_free(data);
     }
 }
 
@@ -1129,14 +1112,14 @@ static void
 refreshStoreData(WMIAccessor *wmi, NicInfo *nicInfo,
                  TSInfo *tsInfo, struct watch_feature_set *wfs)
 {
-    PCHAR buffer = NULL;
+    char buffer[256];
     static int64_t last_meminfo_free;
     static int cntr;
     unsigned need_kick;
 
     need_kick = 0;
-    if (XenstoreRead("attr/PVAddons/Installed",
-                     &buffer) < 0) {
+    if (false == XenstoreRead("attr/PVAddons/Installed",
+                     sizeof(buffer), buffer)) {
         if (GetLastError() == ERROR_NO_SYSTEM_RESOURCES)
             return;
 
@@ -1146,21 +1129,15 @@ refreshStoreData(WMIAccessor *wmi, NicInfo *nicInfo,
         UpdateProcessListInStore(wmi);
         AdvertiseFeatures(wfs);
         need_kick = 1;
-    } else {
-        XSPVDriver_free(buffer);
     }
 
-    if (XenstoreRead("data/meminfo_free", &buffer) < 0) {
+    if (false == XenstoreRead("data/meminfo_free", sizeof(buffer), buffer)) {
         cntr = 0;
         last_meminfo_free = 0;
-    } else {
-        XSPVDriver_free(buffer);
     }
 
-    if (XenstoreRead("data/ts", &buffer) < 0) {
+    if (false == XenstoreRead("data/ts", sizeof(buffer), buffer)) {
         cntr = 0;
-    } else {
-        XSPVDriver_free(buffer);
     }
 
     /* XXX HACK: Restrict ourselves to only doing this once every two
@@ -1209,12 +1186,11 @@ processPing(void *ctx)
 static void
 processDumpLog(void *ctx)
 {
-    char *val;
+    char val[256];
     int do_it;
 
     do_it = 0;
-    if (XenstoreRead("control/dumplog", &val) >= 0) {
-        XSPVDriver_free(val);
+    if (XenstoreRead("control/dumplog", sizeof(val), val)) {
         do_it = 1;
     } else if (GetLastError() != ERROR_FILE_NOT_FOUND)
         do_it = 1;

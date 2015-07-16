@@ -276,6 +276,7 @@ InstallRootEnumeratedDriver(
     if (!SetupDiGetINFClass(INFFile, &ClassGUID, ClassName, sizeof(ClassName), 0)) {
         Err = GetLastError();
         DisplayError(hWnd, TEXT("GetINFClass"));
+        DisplayError(hWnd, TEXT(INFFile));
         goto clean;
     }
     

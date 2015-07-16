@@ -29,7 +29,7 @@
 #include <windows.h>
 #include "stdafx.h"
 #include "XSAccessor.h"
-#include "XenPVDAccessor.h"
+#include "XenPVDAccess.h"
 #include "xs_private.h"
 
 static __declspec(thread) struct XSPVDriver_handle *XenstoreHandle;
@@ -209,15 +209,9 @@ XenstoreRemove(const char *path)
         return -1;
 }
 
-ssize_t
-XenstoreRead(const char* path, char** value)
+bool XenstoreRead(const char* path, size_t size, char* value)
 {
-    size_t len;
-    *value = (char *)XSPVDriver_read(XenstoreHandle, path, &len);
-    if (*value)
-        return len;
-    else
-        return -1;
+    return XSPVDriver_read(XenstoreHandle, path, size, value);
 }
 
 struct XSPVDriver_watch *

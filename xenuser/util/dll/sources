@@ -9,7 +9,7 @@ TARGETTYPE=DYNLINK
 TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 $(SDK_LIB_PATH)\user32.lib \
 $(SDK_LIB_PATH)\wtsapi32.lib \
-..\..\..\$(BUILDDIR_ARCH)\XenPVDAccessor.lib
+..\..\..\$(BUILDDIR_ARCH)\XenPVDAccess.lib
 
 NO_NTDLL=1
 USE_MSVCRT=1
@@ -18,7 +18,7 @@ UMTYPE=windows
 
 DLLDEF=xsutil.def
 
-INCLUDES=$(INCLUDES);..\..\XenPVDAccessor;
+INCLUDES=$(INCLUDES);..\..\XenPVDAccess;..\..\..\pvdrivers\win\xeniface\include
 
 C_DEFINES=$(C_DEFINES) -DXSUTIL_EXPORTS
 SOURCES=util.c xsutil.rc

@@ -389,11 +389,11 @@ fail1:
 VOID
 TSInfo::ProcessControl()
 {
-    CHAR    *Buffer; 
+    char    Buffer[256];
     BOOLEAN Enable;
     HRESULT Result;
 
-    if (XenstoreRead("control/ts", &Buffer) < 0)
+    if (false == XenstoreRead("control/ts", sizeof(Buffer), Buffer))
         return;
 
     XenstoreRemove("control/ts");

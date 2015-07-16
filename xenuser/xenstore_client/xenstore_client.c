@@ -107,8 +107,11 @@ do_dir(int argc, char *argv[])
     contents = xs_directory(xs_handle, argv[2], &count);
     if (!contents)
         win_err(1, "listing %s", argv[2]);
-    for (x = 0; x < count; x++)
+    for (x = 0; x < count; x++) {
         printf("%s\n", contents[x]);
+        free(contents[x]);
+    }
+    free(contents);
     exit(0);
 }
 

@@ -141,7 +141,9 @@ xs_ls_expected_error(unsigned code, const char *path, DWORD e)
     contents = xs_directory(xs_handle, path, &count);
     if (contents) {
         fail_test(code, "managed to ls %s (%d)\n", path, count);
-        free(contents);
+        for (unsigned x = 0; x < count; x++) {
+            free (contents[x]);
+        }
     } else {
         err = GetLastError();
         if (e != err) {
@@ -440,6 +442,9 @@ main()
                   GetLastError());
     } else if (count != 0) {
         fail_test(__LINE__, "ls data/test/key1 had %d items", count);
+        for (unsigned x = 0; x < count; x++) {
+            free (contents[x]);
+        }
         free(contents);
     } else {
         free(contents);
@@ -455,10 +460,16 @@ main()
                   GetLastError());
     } else if (count != 1) {
         fail_test(__LINE__, "ls data/test/key1 had %d items", count);
-        free(contents);
     } else if (strcmp(contents[0], "key2")) {
         fail_test(__LINE__, "ls data/test/key1 gave unexpected result %s",
                   contents[0]);
+    }
+
+    if (contents) {
+        for (unsigned x = 0; x < count; x++) {
+            free (contents[x]);
+        }
+        free(contents);
     }
 
     xs_remove(xs_handle, "data/test");

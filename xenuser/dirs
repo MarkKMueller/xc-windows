@@ -1,8 +1,8 @@
-DIRS=XenPVDAccessor \
+DIRS=XenPVDAccess \
      xs \
      util \
-     xstest \
-     xs2test \
+#     xstest \
+#     xs2test \
      xstest_dyn \
      xenstore_client \
      xenops \

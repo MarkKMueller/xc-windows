@@ -8,7 +8,7 @@ TARGETTYPE=DYNLINK
 
 TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 $(SDK_LIB_PATH)\user32.lib \
-$(TARGETPATH_ARCH)\XenPVDAccessor.lib \
+$(TARGETPATH_ARCH)\XenPVDAccess.lib \
 $(TARGETPATH_ARCH)\xsutil.lib \
 $(TARGETPATH_ARCH)\xenops.lib \
 
@@ -18,6 +18,6 @@ UMTYPE=windows
 
 DLLDEF=v2v.def
 
-INCLUDES=$(INCLUDES);..\XenPVDAccessor
+INCLUDES=$(INCLUDES);..\XenPVDAccess;..\..\pvdrivers\win\xeniface\include
 
 SOURCES=v2v.c util.c stream.c v2v.rc

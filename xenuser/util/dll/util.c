@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "xs_private.h"
-#include "XenPVDAccessor.h"
+#include "XenPVDAccess.h"
 
 typedef DWORD WTSGetActiveConsoleSessionId_t(void);
 

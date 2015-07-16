@@ -29,7 +29,7 @@ void *ymalloc(size_t size);
 char *ystrdup(const char *str);
 void yfree(const void *ptr);
 
-char *xenstore_readv_string(struct XSPVDriver_handle *XSPVDriver, ...);
+BOOL xenstore_readv_string(struct XSPVDriver_handle *XSPVDriver, size_t bufferByteCount, char *resultBuffer, ...);
 struct XSPVDriver_watch *xenstore_watchv(struct XSPVDriver_handle *XSPVDriver, HANDLE event, ...);
 
 enum xenstore_scatter_type {

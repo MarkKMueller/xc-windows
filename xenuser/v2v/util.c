@@ -23,7 +23,7 @@
 #include <windows.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <XenPVDAccessor.h>
+#include <XenPVDAccess.h>
 #include <xs_private.h>
 #include <xenops.h>
 
@@ -64,21 +64,20 @@ yfree(const void *ptr)
     SetLastError(err);
 }
 
-char *
-xenstore_readv_string(struct XSPVDriver_handle *XSPVDriver, ...)
+BOOL xenstore_readv_string(struct XSPVDriver_handle *XSPVDriver, size_t bufferByteCount, char *resultBuffer, ...)
 {
+    BOOL result;
     char *path;
     va_list args;
-    void *res;
 
     va_start(args, XSPVDriver);
     path = xs_vassemble_strings("/", &args);
     va_end(args);
     if (!path)
-        return NULL;
-    res = XSPVDriver_read(XSPVDriver, path, NULL);
+        return FALSE;
+    result = XSPVDriver_read(XSPVDriver, path, bufferByteCount, resultBuffer);
     yfree(path);
-    return res;
+    return result;
 }
 
 struct XSPVDriver_watch *
@@ -188,7 +187,7 @@ xenstore_gather(struct XSPVDriver_handle *XSPVDriver, const char *prefix, ...)
     va_list args;
     const char *name;
     enum xenstore_gather_type type;
-    char *raw_data;
+    char raw_data[256];
     int r;
     BOOL res;
 
@@ -199,11 +198,12 @@ xenstore_gather(struct XSPVDriver_handle *XSPVDriver, const char *prefix, ...)
         if (!name)
             break;
         type = va_arg(args, enum xenstore_gather_type);
-        raw_data = xenstore_readv_string(XSPVDriver,
-                                        prefix,
-                                        name,
-                                        NULL);
-        if (!raw_data) {
+
+        if (FALSE == xenstore_readv_string(XSPVDriver,
+                                           sizeof(raw_data),
+                                           raw_data,
+                                           prefix,
+                                           name)) {
             res = FALSE;
             break;
         }
