@@ -32,6 +32,8 @@ ${StrStr}
 !define SIGN_PREFIX "..\sign32"
 !define SIGN_PREFIX_64 "..\sign64"
 
+!define NO_INSTALL_XENSERVICE
+
 # OsType is one of 2008r2, 7, 2008, Vista, 2003, XP, and 2000.
 Var /GLOBAL OsType
 Var /GLOBAL ServicePack
@@ -631,10 +633,6 @@ ${Endif}
     File ${SIGN_PREFIX}\xenvusb.inf
     File ${SIGN_PREFIX}\WdfCoInstaller01009.dll
 
-    File ${SIGN_PREFIX}\xenwnet.sys
-    File ${SIGN_PREFIX}\xenwnet6.sys
-    File ${SIGN_PREFIX}\xenwnet.inf
-    File /nonfatal ${SIGN_PREFIX}\xenwnet.cat
 	File /nonfatal ${SIGN_PREFIX}\xenaud.cat
 	File ${SIGN_PREFIX}\xenaud.sys
 	File ${SIGN_PREFIX}\xenaud.inf
@@ -667,12 +665,6 @@ ${EndIf}
     File /nonfatal ${SIGN_PREFIX}\xeninp.cat
     File ${SIGN_PREFIX}\xeninp.inf
 
-    ${If} "$OsType" != "2000"
-      File ${SIGN_PREFIX}\xenv4v.sys
-      File /nonfatal ${SIGN_PREFIX}\xenv4v.cat
-      File ${SIGN_PREFIX}\xenv4v.inf
-    ${EndIf}
-
     File ${SIGN_PREFIX}\xenutil.sys
 
     File /oname=xs.new ${BUILD_PREFIX}\xs.dll
@@ -703,10 +695,6 @@ ${EndIf}
     File ${SIGN_PREFIX_64}\xenvusb.inf
     File ${SIGN_PREFIX_64}\WdfCoInstaller01009.dll
 	
-    File ${SIGN_PREFIX_64}\xenwnet.sys
-    File ${SIGN_PREFIX_64}\xenwnet6.sys
-    File ${SIGN_PREFIX_64}\xenwnet.inf
-    File /nonfatal ${SIGN_PREFIX_64}\xenwnet.cat
 	File /nonfatal ${SIGN_PREFIX_64}\xenaud.cat
 	File ${SIGN_PREFIX_64}\xenaud.sys
 	File ${SIGN_PREFIX_64}\xenaud.inf
@@ -738,12 +726,6 @@ ${EndIf}
 	File ${SIGN_PREFIX_64}\xeninp.sys
 	File ${SIGN_PREFIX_64}\xeninp.cat
 	File ${SIGN_PREFIX_64}\xeninp.inf
-
-    ${If} "$OsType" != "2000"
-      File ${SIGN_PREFIX_64}\xenv4v.sys
-      File ${SIGN_PREFIX_64}\xenv4v.inf
-      File /nonfatal ${SIGN_PREFIX_64}\xenv4v.cat
-    ${EndIf}
 
     File ${SIGN_PREFIX_64}\xenutil.sys
 
@@ -808,9 +790,6 @@ ${EndIf}
   Push "XEN\VWIF"
   Call DeleteInstalledOemInf
 
-  Push "XEN\V4V"
-  Call DeleteInstalledOemInf
-
   Push "XENBUS\CLASS&IFACE"
   Call DeleteInstalledOemInf
 
@@ -864,7 +843,6 @@ NoPVBoot:
 InstallINFs:
   ${LogText} "Installing INF files..."
   ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xeninp.inf"' $0
-  ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenwnet.inf"' $0
   ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenaud.inf"' $0
   
 !ifdef INSTALL_XENVESA
@@ -885,10 +863,6 @@ ${EndIf}
     ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenvusb.inf"' $0
   ${EndIf}
 	
-  ${If} "$OsType" != "2000"
-    ExecWait '"$TEMP\installdriver.exe" "/i" "$HWNDPARENT" "$INSTDIR\xenv4v.inf"' $0
-  ${EndIf}
-
   ${LogText} "Installing xenmou drivers..."
   DetailPrint "Installing xenmou driver..."
     ${If} $R0 == "New"
@@ -908,16 +882,6 @@ ${EndIf}
     ${endif}
   ${endif}
   
-  IfErrors error
-  IntCmp "$0" 0 0 error
-
-  ${LogText} "Installing xenwnet driver..."
-  DetailPrint "Installing xenwnet driver..."
-  ${If} $R0 == "New"
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "XEN\vwif" "$INSTDIR\xenwnet.inf" "0"' $0
-  ${else}
-    ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "XEN\vwif" "$INSTDIR\xenwnet.inf" "1"' $0
-  ${endif}
   IfErrors error
   IntCmp "$0" 0 0 error
 
@@ -952,19 +916,6 @@ ${EndIf}
 !else
   ${LogText} "Skipping xenvesa driver installation..."
 !endif
-  
-  ${If} "$OsType" != "2000"
-    ${LogText} "Installing xenv4v driver..."
-    DetailPrint "Installing xenv4v driver..."
-    ${If} $R0 == "New"
-      ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "XEN\v4v" "$INSTDIR\xenv4v.inf" "0"' $0
-    ${else}
-      ExecWait '"$TEMP\installdriver.exe" "/p" "$HWNDPARENT" "XEN\v4v" "$INSTDIR\xenv4v.inf" "1"' $0
-    ${endif}
-    IfErrors error
-    IntCmp "$0" 0 0 error
-    IntCmp "$0" 0 0 error
-  ${EndIf}
   
   # Check if the ServicesPipeTimeout is set for the machine
   ReadRegDWORD $InitialServicesPipeTimeout HKLM "SYSTEM\CurrentControlSet\Control" "ServicesPipeTimeout"
@@ -1167,10 +1118,6 @@ providerNotInstalled:
 
   # remove the driver devnode, files, infs...etc
   ExecWait '"$INSTDIR\removedev.exe" "/d" "XEN\vwif"' $0
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenwnet
-  DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenwnet6
-  Delete /REBOOTOK $REALSYSDIR\drivers\xenwnet.sys
-  Delete /REBOOTOK $REALSYSDIR\drivers\xenwnet6.sys
   Push "XEN\vwif"
   Call un.DeleteInstalledOemInf
 
@@ -1180,15 +1127,6 @@ providerNotInstalled:
     DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenvusb
     Delete /REBOOTOK $REALSYSDIR\drivers\xenvusb.sys
     Push "XEN\vusb"
-    Call un.DeleteInstalledOemInf
-  ${EndIf}
-  
-  ${If} "$OsType" != "2000"
-    # remove the driver devnode, files, infs...etc
-    ExecWait '"$INSTDIR\removedev.exe" "/d" "XEN\v4v"' $0
-    DeleteRegKey HKLM SYSTEM\CurrentControlSet\Services\xenv4v
-    Delete /REBOOTOK $REALSYSDIR\drivers\xenv4v.sys
-    Push "XEN\v4v"
     Call un.DeleteInstalledOemInf
   ${EndIf}
   
@@ -1252,10 +1190,6 @@ ${EndIf}
   Delete /REBOOTOK $INSTDIR\install.dll
   Delete /REBOOTOK $INSTDIR\install.log
   Delete /REBOOTOK $INSTDIR\scsifilt.sys
-  Delete /REBOOTOK $INSTDIR\xenwnet.inf
-  Delete /REBOOTOK $INSTDIR\xenwnet.sys
-  Delete /REBOOTOK $INSTDIR\xenwnet6.sys
-  Delete /REBOOTOK $INSTDIR\xenwnet.cat
   Delete /REBOOTOK $INSTDIR\xenaud.inf
   Delete /REBOOTOK $INSTDIR\xenaud.cat
   Delete /REBOOTOK $INSTDIR\xenaud.sys
@@ -1288,11 +1222,6 @@ ${EndIf}
 	Delete /REBOOTOK $INSTDIR\xeninp.sys
     Delete /REBOOTOK $INSTDIR\xeninp.cat
 
-  ${If} "$OsType" != "2000"
-    Delete /REBOOTOK $INSTDIR\xenv4v.inf
-    Delete /REBOOTOK $INSTDIR\xenv4v.sys
-    Delete /REBOOTOK $INSTDIR\xenv4v.cat
-  ${EndIf}
 !ifndef NO_INSTALL_XENSERVICE
   Delete /REBOOTOK $INSTDIR\xenservice.exe
 !endif

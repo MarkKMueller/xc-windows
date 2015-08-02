@@ -3,7 +3,7 @@ include ..\config.mk
 
 TARGETNAME=xenv4v
 TARGETTYPE=DRIVER
-INCLUDES=$(INCLUDES);..\xenhdrs
+INCLUDES=$(INCLUDES);..\xenhdrs;..\xenuser\XenPVDAccess;..\pvdrivers\win\xeniface\include;..\pvdrivers\win\xenbus\include\OpenXTV4V
 
 TARGETLIBS=$(DDK_LIB_PATH)\csq.lib \
            $(DDK_LIB_PATH)\ntstrsafe.lib \

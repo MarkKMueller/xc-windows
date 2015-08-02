@@ -16,14 +16,12 @@ rem %1\bin\x86\stampinf -f xenvbd\xenvbd64.inf -d %Month%/%Day%/%Year% -v || exi
 %1\bin\x86\stampinf -f xenvesa\xenvesa-lh.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f input\xeninp\xeninp.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f input\xenm2b\xenm2b.inf -d %Month%/%Day%/%Year% -v || exit /b 1
-%1\bin\x86\stampinf -f wnet\xenwnet.inf -d %Month%/%Day%/%Year% -v || exit /b 1
-%1\bin\x86\stampinf -f wnet\xenwnet64.inf -d %Month%/%Day%/%Year% -v || exit /b 1
+rem %1\bin\x86\stampinf -f wnet\xenwnet.inf -d %Month%/%Day%/%Year% -v || exit /b 1
+rem %1\bin\x86\stampinf -f wnet\xenwnet64.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xengfx\vesa\wddm\miniport\xenVesaDO.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xengfx\wddm\xengfx32.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xengfx\wddm\xengfx64.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xengfx\xddm\xengfx-lh.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xengfx\xddm\xengfx-xp.inf -d %Month%/%Day%/%Year% -v || exit /b 1
-%1\bin\x86\stampinf -f xenv4v\xenv4v.inf -d %Month%/%Day%/%Year% -v || exit /b 1
-%1\bin\x86\stampinf -f xenv4v\xenv4v64.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xenaud\xenaud.inf -d %Month%/%Day%/%Year% -v || exit /b 1
 %1\bin\x86\stampinf -f xenaud\xenaud64.inf -d %Month%/%Day%/%Year% -v || exit /b 1

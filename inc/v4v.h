@@ -278,6 +278,113 @@ struct v4v_ring_message_header
 #pragma pack(pop)
 #endif
 
+/* This structure is used for datagram reads and writes. When sending a
+ * datagram, extra space must be reserved at the front of the buffer to
+ * format the @addr values in the following structure to indicate the
+ * destination address. When receiving data, the receive buffer should also
+ * supply the extra head room for the source information that will be
+ * returned by V4V. The size of the send/receive should include the extra
+ * space for the datagram structure.
+ */
+#pragma pack(push, 1)
+typedef struct _V4V_DATAGRAM {
+    v4v_addr_t addr;
+    /* data starts here */
+} V4V_DATAGRAM, *PV4V_DATAGRAM;
+#pragma pack(pop)
+
+/* Typedef for internal stream header structure */
+typedef struct v4v_stream_header V4V_STREAM, *PV4V_STREAM;
+
+/* Default internal max backlog length for pending connections */
+#define V4V_SOMAXCONN 128
+
+typedef struct _V4V_INIT_VALUES {
+    VOID *rxEvent;
+    ULONG32 ringLength;
+} V4V_INIT_VALUES, *PV4V_INIT_VALUES;
+
+typedef struct _V4V_BIND_VALUES {
+    struct v4v_ring_id ringId;
+} V4V_BIND_VALUES, *PV4V_BIND_VALUES;
+
+typedef struct _V4V_LISTEN_VALUES {
+    ULONG32 backlog;
+} V4V_LISTEN_VALUES, *PV4V_LISTEN_VALUES;
+
+typedef union _V4V_ACCEPT_PRIVATE {
+    struct {
+        ULONG32 a;
+        ULONG32 b;
+    } d;
+    struct {
+        ULONG64 a;
+    } q;
+} V4V_ACCEPT_PRIVATE, *PV4V_ACCEPT_PRIVATE;
+
+typedef struct _V4V_ACCEPT_VALUES {
+    VOID *fileHandle;
+    VOID *rxEvent;
+    struct v4v_addr peerAddr;
+    V4V_ACCEPT_PRIVATE priv;
+} V4V_ACCEPT_VALUES, *PV4V_ACCEPT_VALUES;
+
+typedef struct _V4V_CONNECT_VALUES {
+    V4V_STREAM sh;
+    struct v4v_addr ringAddr;
+} V4V_CONNECT_VALUES, *PV4V_CONNECT_VALUES;
+
+typedef struct _V4V_WAIT_VALUES {
+    V4V_STREAM sh;
+} V4V_WAIT_VALUES, *PV4V_WAIT_VALUES;
+
+typedef enum _V4V_GETINFO_TYPE {
+    V4vInfoUnset    = 0,
+    V4vGetLocalInfo = 1,
+    V4vGetPeerInfo  = 2
+} V4V_GETINFO_TYPE, *PV4V_GETINFO_TYPE;
+
+typedef struct _V4V_GETINFO_VALUES {
+    V4V_GETINFO_TYPE type;
+    struct v4v_ring_id ringInfo;
+} V4V_GETINFO_VALUES, *PV4V_GETINFO_VALUES;
+
+#if defined(_WIN64)
+#define V4V_64BIT 0x800
+#else
+#define V4V_64BIT 0x000
+#endif
+
+/* V4V I/O Control Function Codes */
+#define V4V_FUNC_INITIALIZE 0x10
+#define V4V_FUNC_BIND       0x11
+#define V4V_FUNC_LISTEN     0x12
+#define V4V_FUNC_ACCEPT     0x13
+#define V4V_FUNC_CONNECT    0x14
+#define V4V_FUNC_WAIT       0x15
+#define V4V_FUNC_DISCONNECT 0x16
+#define V4V_FUNC_GETINFO    0x17
+#define V4V_FUNC_DUMPRING   0x18
+
+/* V4V I/O Control Codes */
+#if defined(_WIN64)
+#define V4V_IOCTL_INITIALIZE CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_INITIALIZE|V4V_64BIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#else
+#define	V4V_IOCTL_INITIALIZE CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_INITIALIZE, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#endif
+#define	V4V_IOCTL_BIND       CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_BIND, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define	V4V_IOCTL_LISTEN     CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_LISTEN, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#if defined(_WIN64)
+#define V4V_IOCTL_ACCEPT     CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_ACCEPT|V4V_64BIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#else
+#define	V4V_IOCTL_ACCEPT     CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_ACCEPT, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#endif
+#define	V4V_IOCTL_CONNECT    CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_CONNECT, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define	V4V_IOCTL_WAIT       CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_WAIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define	V4V_IOCTL_DISCONNECT CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_DISCONNECT, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define	V4V_IOCTL_GETINFO    CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_GETINFO, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define	V4V_IOCTL_DUMPRING   CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_DUMPRING, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
 /************ Internal RING 0/-1 parts **********/
 #if !defined(V4V_EXCLUDE_INTERNAL)
 

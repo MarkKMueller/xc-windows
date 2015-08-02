@@ -30,7 +30,7 @@
 #include "xen_types.h"
 DEFINE_XEN_GUEST_HANDLE(void);
 
-#include "v4v.h"
+#include <OpenXTV4V.h>
 
 static VOID
 v4v_hexdump(void *_b, int len)

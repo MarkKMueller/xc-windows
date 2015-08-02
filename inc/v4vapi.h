@@ -23,130 +23,9 @@
 #ifndef __V4VAPI_H__
 #define __V4VAPI_H__
 
-#if !defined(XENV4V_DRIVER)
-#define V4V_EXCLUDE_INTERNAL
-#endif
-#include "v4v.h"
-
-/* This structure is used for datagram reads and writes. When sending a 
- * datagram, extra space must be reserved at the front of the buffer to
- * format the @addr values in the following structure to indicate the 
- * destination address. When receiving data, the receive buffer should also
- * supply the extra head room for the source information that will be 
- * returned by V4V. The size of the send/receive should include the extra 
- * space for the datagram structure.
- */
-#pragma pack(push, 1)
-typedef struct _V4V_DATAGRAM {
-    v4v_addr_t addr;
-    /* data starts here */
-} V4V_DATAGRAM, *PV4V_DATAGRAM;
-#pragma pack(pop)
-
-/* Typedef for internal stream header structure */
-typedef struct v4v_stream_header V4V_STREAM, *PV4V_STREAM;
-
-/* ========================== IOCTL Interface ============================= */
-#define V4V_DRIVER_NAME    L"xenv4v"
-#define V4V_DEVICE_NAME    L"\\Device\\xenv4v"
-#define V4V_SYMBOLIC_NAME  L"\\DosDevices\\Global\\v4vdev"
-#define V4V_USER_FILE_NAME L"\\\\.\\Global\\v4vdev"
-#define V4V_BASE_FILE_NAME L"v4vdev"
-
-#define V4V_SYS_FILENAME   L"%SystemRoot%\\system32\\drivers\\xenv4v.sys"
-
-/* Default internal max backlog length for pending connections */
-#define V4V_SOMAXCONN 128
-
-typedef struct _V4V_INIT_VALUES {
-    VOID *rxEvent;
-    ULONG32 ringLength;
-} V4V_INIT_VALUES, *PV4V_INIT_VALUES;
-
-typedef struct _V4V_BIND_VALUES {
-    struct v4v_ring_id ringId;
-} V4V_BIND_VALUES, *PV4V_BIND_VALUES;
-
-typedef struct _V4V_LISTEN_VALUES {
-    ULONG32 backlog;
-} V4V_LISTEN_VALUES, *PV4V_LISTEN_VALUES;
-
-typedef union _V4V_ACCEPT_PRIVATE {
-    struct {
-        ULONG32 a;
-        ULONG32 b;
-    } d;
-    struct {
-        ULONG64 a;
-    } q;
-} V4V_ACCEPT_PRIVATE, *PV4V_ACCEPT_PRIVATE;
-
-typedef struct _V4V_ACCEPT_VALUES {
-    VOID *fileHandle;
-    VOID *rxEvent;
-    struct v4v_addr peerAddr;
-    V4V_ACCEPT_PRIVATE priv;
-} V4V_ACCEPT_VALUES, *PV4V_ACCEPT_VALUES;
-
-typedef struct _V4V_CONNECT_VALUES {
-    V4V_STREAM sh;
-    struct v4v_addr ringAddr;
-} V4V_CONNECT_VALUES, *PV4V_CONNECT_VALUES;
-
-typedef struct _V4V_WAIT_VALUES {
-    V4V_STREAM sh;
-} V4V_WAIT_VALUES, *PV4V_WAIT_VALUES;
-
-typedef enum _V4V_GETINFO_TYPE {
-    V4vInfoUnset    = 0,
-    V4vGetLocalInfo = 1,
-    V4vGetPeerInfo  = 2
-} V4V_GETINFO_TYPE, *PV4V_GETINFO_TYPE;
-
-typedef struct _V4V_GETINFO_VALUES {
-    V4V_GETINFO_TYPE type;
-    struct v4v_ring_id ringInfo;  
-} V4V_GETINFO_VALUES, *PV4V_GETINFO_VALUES;
-
-#if defined(_WIN64)
-#define V4V_64BIT 0x800
-#else
-#define V4V_64BIT 0x000
-#endif
-
-/* V4V I/O Control Function Codes */
-#define V4V_FUNC_INITIALIZE 0x10
-#define V4V_FUNC_BIND       0x11
-#define V4V_FUNC_LISTEN     0x12
-#define V4V_FUNC_ACCEPT     0x13
-#define V4V_FUNC_CONNECT    0x14
-#define V4V_FUNC_WAIT       0x15
-#define V4V_FUNC_DISCONNECT 0x16
-#define V4V_FUNC_GETINFO    0x17
-#define V4V_FUNC_DUMPRING   0x18
-
-/* V4V I/O Control Codes */
-#if defined(_WIN64)
-#define V4V_IOCTL_INITIALIZE CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_INITIALIZE|V4V_64BIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#else
-#define	V4V_IOCTL_INITIALIZE CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_INITIALIZE, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#endif
-#define	V4V_IOCTL_BIND       CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_BIND, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define	V4V_IOCTL_LISTEN     CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_LISTEN, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#if defined(_WIN64)
-#define V4V_IOCTL_ACCEPT     CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_ACCEPT|V4V_64BIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#else
-#define	V4V_IOCTL_ACCEPT     CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_ACCEPT, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#endif
-#define	V4V_IOCTL_CONNECT    CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_CONNECT, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define	V4V_IOCTL_WAIT       CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_WAIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define	V4V_IOCTL_DISCONNECT CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_DISCONNECT, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define	V4V_IOCTL_GETINFO    CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_GETINFO, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define	V4V_IOCTL_DUMPRING   CTL_CODE(FILE_DEVICE_UNKNOWN, V4V_FUNC_DUMPRING, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#include <OpenXTV4VAccess.h>
 
 /* =========================== User Mode API ============================== */
-
-#if !defined(XENV4V_DRIVER)
 
 /* The following must be included before this header:
  * #include <windows.h>
@@ -211,41 +90,9 @@ typedef struct _V4V_GETINFO_VALUES {
 /* Default @ringId for V4vBind() to specify no specific binding information */
 static const v4v_ring_id_t V4V_DEFAULT_CONNECT_ID = {{V4V_PORT_NONE, V4V_DOMID_NONE}, V4V_DOMID_NONE};
 
-#define V4V_FLAG_NONE       0x00000000
-#define V4V_FLAG_OVERLAPPED 0x00000001
-
-/* Overlapped sanity check macro */
-#define V4V_CHECK_OVERLAPPED(c, o) \
-    if ((c->flags & V4V_FLAG_OVERLAPPED)&&(o == NULL)) { \
-        SetLastError(ERROR_INVALID_PARAMETER); \
-        return FALSE; \
-    }
-
-/* The following structure represents a V4V channel either opened with 
- * V4vOpen() or returned from a listening V4V channel in a call to
- * V4vAccept().
- * 
- * The @v4vHandle is the file handle for an open instance of the V4V device.
- * This value is used in subsequent calls to read and write. The
- * @recvEvent is a Windows auto-reset event handle that becomes signaled
- * when data arrived on the V4V channel associated with the open file.
- *
- * The @flags field can be set to V4V_FLAG_OVERLAPPED if the caller intends
- * to use overlapped or asynchronous file IO with the V4V handle. If blocking
- * IO mode is desired, then the flag should be set to V4V_FLAG_NONE. The 
- * should be set before any call to the V4V functions and should not @flags
- * later be changed.
- */
-typedef struct _V4V_CONTEXT
-{
-    HANDLE v4vHandle; /* handle for open V4V file */
-    HANDLE recvEvent; /* data arrival, new connection for accept */
-    ULONG  flags;     /* configuration flags set by caller */
-} V4V_CONTEXT, *PV4V_CONTEXT;
-
 /* This routine opens a V4V file and associated channel. The @context
  * structure is passed in to the routine and if the call is successful, the
- * @v4vHandle and @recvEvent handles will be valid and ready for use in
+ * @OpenXTV4VDevice and @recvEvent handles will be valid and ready for use in
  * further V4V calls to initialize the channel.
  *
  * The @ringSize argument indicates how large the local receive ring for the
@@ -264,59 +111,11 @@ typedef struct _V4V_CONTEXT
  * information can be obtained by calling GetLastError().
  */
 static V4V_INLINE_API BOOL
-V4vOpen(V4V_CONTEXT *context, ULONG ringSize, OVERLAPPED *ov)
+V4vOpen(void *context, ULONG ringSize, OVERLAPPED *ov)
 {
-    HANDLE hd;
-    V4V_INIT_VALUES init = {0};
-    BOOL rc;
-    DWORD br;
+    context = V4VDriverInitialize(ringSize, ov);
 
-    if (context == NULL) {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    context->recvEvent = NULL;
-    context->v4vHandle = INVALID_HANDLE_VALUE;
-
-    hd = CreateFileW(V4V_USER_FILE_NAME, GENERIC_READ|GENERIC_WRITE,
-                     FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-                     FILE_ATTRIBUTE_NORMAL|((context->flags & V4V_FLAG_OVERLAPPED) ? FILE_FLAG_OVERLAPPED : 0),
-                     NULL);
-    if (hd == INVALID_HANDLE_VALUE)
-        return FALSE;
-   
-    init.ringLength = ringSize;
-    init.rxEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (init.rxEvent == NULL) {        
-        CloseHandle(hd);
-        return FALSE;
-    }
-
-    do {
-        SetLastError(ERROR_SUCCESS);
-
-        rc = DeviceIoControl(hd, V4V_IOCTL_INITIALIZE, &init, sizeof(V4V_INIT_VALUES), NULL, 0, &br, ov);
-        if (context->flags & V4V_FLAG_OVERLAPPED) {
-            if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-                break;
-            }
-        }
-        else if (!rc) {
-            break;
-        }
-
-        context->v4vHandle = hd;
-        context->recvEvent = init.rxEvent;
-
-        return TRUE;
-    } while (FALSE);
-
-    CloseHandle(init.rxEvent);
-    CloseHandle(hd);
-    return FALSE;
+    return V4VDriverTestValid(context);
 }
 
 /* All users of V4V must call V4vBind() before calling any of the other V4V
@@ -350,32 +149,9 @@ V4vOpen(V4V_CONTEXT *context, ULONG ringSize, OVERLAPPED *ov)
  * V4vOpen().
  */
 static V4V_INLINE_API BOOL
-V4vBind(V4V_CONTEXT *context, v4v_ring_id_t *ringId, OVERLAPPED *ov)
+V4vBind(void *context, v4v_ring_id_t *ringId, OVERLAPPED *ov)
 {
-    V4V_BIND_VALUES bind;
-    DWORD br;
-    BOOL rc;
-
-    if ((context == NULL)||(ringId == NULL)) {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    memcpy(&bind.ringId, ringId, sizeof(v4v_ring_id_t));
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_BIND, &bind, sizeof(V4V_BIND_VALUES), NULL, 0, &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }
-    return TRUE;
+    return V4VDriverBind(context, ringId, ov);
 }
 
 /* This routine starts a listening V4V channel. For listening channels, the
@@ -401,34 +177,9 @@ V4vBind(V4V_CONTEXT *context, v4v_ring_id_t *ringId, OVERLAPPED *ov)
  * V4vBind().
  */
 static V4V_INLINE_API BOOL
-V4vListen(V4V_CONTEXT *context, ULONG backlog, OVERLAPPED *ov)
+V4vListen(void *context, ULONG backlog, OVERLAPPED *ov)
 {
-    V4V_LISTEN_VALUES listen;
-    DWORD br;
-    BOOL rc;
-
-    if (context == NULL) {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    ZeroMemory(&listen, sizeof(V4V_LISTEN_VALUES));
-    listen.backlog = backlog;
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_LISTEN, &listen, 
-                         sizeof(V4V_LISTEN_VALUES), NULL, 0, &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }
-    return TRUE;
+    return V4VDriverListen(context, backlog, ov);
 }
 
 /* Once a listening channel is established, calls can be made to V4vAccept()
@@ -460,59 +211,14 @@ V4vListen(V4V_CONTEXT *context, ULONG backlog, OVERLAPPED *ov)
  * state following a call to V4vListen().
  */
 static V4V_INLINE_API BOOL
-V4vAccept(V4V_CONTEXT *context, V4V_CONTEXT *newContextOut, V4V_ACCEPT_VALUES *acceptOut, OVERLAPPED *ov)
+V4vAccept(void *context, void *newContextOut, V4V_ACCEPT_VALUES *acceptOut, OVERLAPPED *ov)
 {
-    V4V_ACCEPT_VALUES accept;
-    DWORD br;
-    BOOL rc;
-
     if ((context == NULL)||(newContextOut == NULL)||(acceptOut == NULL)) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    ZeroMemory(&accept, sizeof(V4V_ACCEPT_VALUES));
-    ZeroMemory(acceptOut, sizeof(V4V_ACCEPT_VALUES));
-    accept.fileHandle = 
-            CreateFileW(V4V_USER_FILE_NAME, GENERIC_READ|GENERIC_WRITE,
-                        FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-                        FILE_ATTRIBUTE_NORMAL|((context->flags & V4V_FLAG_OVERLAPPED) ? FILE_FLAG_OVERLAPPED : 0),
-                        NULL);
-    if (accept.fileHandle == INVALID_HANDLE_VALUE)        
-        return FALSE;        
-
-    accept.rxEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (accept.rxEvent == NULL) {
-        CloseHandle(accept.fileHandle);
-        return FALSE;
-    }
-
-    do {
-        SetLastError(ERROR_SUCCESS);
-
-        rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_ACCEPT, &accept, sizeof(V4V_ACCEPT_VALUES),
-                             acceptOut, sizeof(V4V_ACCEPT_VALUES), &br, ov);
-        if (context->flags & V4V_FLAG_OVERLAPPED) {
-            if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-                break;
-            }
-        }
-        else if (!rc) {
-            break;
-        }
-
-        newContextOut->v4vHandle = accept.fileHandle;
-        newContextOut->recvEvent = accept.rxEvent;
-        newContextOut->flags = context->flags;
-
-        return TRUE;
-    } while (FALSE);
-
-    CloseHandle(accept.rxEvent);
-    CloseHandle(accept.fileHandle);
-    return FALSE;
+    return V4VDriverAccept(context, newContextOut, acceptOut, ov);
 }
 
 /* This routine is used to connect V4V channel. The newly connected V4V 
@@ -530,34 +236,14 @@ V4vAccept(V4V_CONTEXT *context, V4V_CONTEXT *newContextOut, V4V_ACCEPT_VALUES *a
  * V4vBind().
  */
 static V4V_INLINE_API BOOL
-V4vConnect(V4V_CONTEXT *context, v4v_addr_t *ringAddr, OVERLAPPED *ov)
+V4vConnect(void *context, v4v_addr_t *ringAddr, OVERLAPPED *ov)
 {
-    V4V_CONNECT_VALUES connect;
-    DWORD br;
-    BOOL rc;
-
     if ((context == NULL)||(ringAddr == NULL)) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    ZeroMemory(&connect, sizeof(V4V_CONNECT_VALUES));
-    memcpy(&connect.ringAddr, ringAddr, sizeof(v4v_addr_t));
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_CONNECT, &connect,
-                         sizeof(V4V_CONNECT_VALUES), NULL, 0, &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }
-    return TRUE;
+    return V4VDriverConnect(context, ringAddr, ov);
 }
 
 /* This function provides an alternate means to make a stream connection.
@@ -577,33 +263,14 @@ V4vConnect(V4V_CONTEXT *context, v4v_addr_t *ringAddr, OVERLAPPED *ov)
  * V4vBind().
  */
 static V4V_INLINE_API BOOL
-V4vConnectWait(V4V_CONTEXT *context, OVERLAPPED *ov)
+V4vConnectWait(void *context, OVERLAPPED *ov)
 {
-    V4V_WAIT_VALUES wait;
-    DWORD br;
-    BOOL rc;
-
     if (context == NULL) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    ZeroMemory(&wait, sizeof(V4V_WAIT_VALUES));
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_WAIT, &wait,
-                         sizeof(V4V_WAIT_VALUES), NULL, 0, &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }
-    return TRUE;
+    return V4VDriverConnectWait(context, ov);
 }
 
 /* This routine is used to disconnect V4V channel stream. The channel be a 
@@ -621,30 +288,14 @@ V4vConnectWait(V4V_CONTEXT *context, OVERLAPPED *ov)
  * be returned if the file is not in the connected/accepted states.
  */
 static V4V_INLINE_API BOOL
-V4vDisconnect(V4V_CONTEXT *context, OVERLAPPED *ov)
+V4vDisconnect(void *context, OVERLAPPED *ov)
 {
-    DWORD br;
-    BOOL rc;
-
     if (context == NULL) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_DISCONNECT, NULL, 0, NULL, 0, &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }
-    return TRUE;
+    return V4VDriverDisconnect(context, ov);
 }
 
 /* Information can be gotten about the local or peer address. If 
@@ -678,37 +329,14 @@ V4vDisconnect(V4V_CONTEXT *context, OVERLAPPED *ov)
  * get the information.
  */
 static V4V_INLINE_API BOOL
-V4vGetInfo(V4V_CONTEXT *context, V4V_GETINFO_TYPE type, V4V_GETINFO_VALUES *infoOut, OVERLAPPED *ov)
+V4vGetInfo(void *context, V4V_GETINFO_TYPE type, V4V_GETINFO_VALUES *infoOut, OVERLAPPED *ov)
 {
-    V4V_GETINFO_VALUES info = {V4vInfoUnset, {{V4V_PORT_NONE, V4V_DOMID_NONE}, V4V_DOMID_NONE}};
-    DWORD br;
-    BOOL rc;
-
     if ((context == NULL)||(infoOut == NULL)) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    info.type = type;
-    ZeroMemory(infoOut, sizeof(V4V_GETINFO_VALUES));
-    infoOut->type = V4vInfoUnset;
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_GETINFO,
-                         &info, sizeof(V4V_GETINFO_VALUES), 
-                         infoOut, sizeof(V4V_GETINFO_VALUES), &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }   
-
-    return TRUE;
+    return V4VDriverGetInfo(context, type, infoOut, ov);
 }
 
 /* This utility routine will dump the current state of the V4V ring to the
@@ -720,36 +348,19 @@ V4vGetInfo(V4V_CONTEXT *context, V4V_GETINFO_TYPE type, V4V_GETINFO_VALUES *info
  * get info operation completes.
  *
  * Returns TRUE on success or FALSE on error, in which case more information
- * can be obtained by calling GetLastError(). ERROR_INVALID_FUNCTION will
+ * can be obtained by calling GetLastError(). ERROR_INVALID_FUNCTION willg
  * be returned if the file is not in the proper state following a call to
  * dump the ring.
  */
 static V4V_INLINE_API BOOL
-V4vDumpRing(V4V_CONTEXT *context, OVERLAPPED *ov)
+V4vDumpRing(void *context, OVERLAPPED *ov)
 {
-    DWORD br;
-    BOOL rc;
-
     if (context == NULL) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    V4V_CHECK_OVERLAPPED(context, ov);
-
-    SetLastError(ERROR_SUCCESS);
-
-    rc = DeviceIoControl(context->v4vHandle, V4V_IOCTL_DUMPRING, NULL, 0, NULL, 0, &br, ov);
-    if (context->flags & V4V_FLAG_OVERLAPPED) {
-        if ((GetLastError() != ERROR_SUCCESS)&&(GetLastError() != ERROR_IO_PENDING)) {
-            return FALSE;
-        }
-    }
-    else if (!rc) {
-        return FALSE;
-    }
-
-    return TRUE;
+    return V4VDriverDumpRing(context, ov);
 }
 
 /* This routine should be used to close the @context handles returned from a
@@ -760,32 +371,10 @@ V4vDumpRing(V4V_CONTEXT *context, OVERLAPPED *ov)
  * can be obtained by calling GetLastError().
  */
 static V4V_INLINE_API BOOL
-V4vClose(V4V_CONTEXT *context)
+V4vClose(void *context)
 {
-    BOOL rc = TRUE;
-
-    if (context == NULL) {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-
-    if (context->recvEvent != NULL) {
-        if (CloseHandle(context->recvEvent))
-            context->recvEvent = NULL;
-        else
-            rc = FALSE;
-    }
-
-    if ((context->v4vHandle != INVALID_HANDLE_VALUE)&&(context->v4vHandle != NULL)) {
-        if (CloseHandle(context->v4vHandle))
-            context->v4vHandle = INVALID_HANDLE_VALUE;
-        else
-            rc = FALSE;
-    }
-
-    return rc;
+    V4VDriverClose(context);
+    return TRUE;
 }
-
-#endif /* XENV4V_DRIVER */
 
 #endif /* !__V4VAPI_H__ */

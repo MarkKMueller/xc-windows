@@ -14,5 +14,5 @@ UMTYPE=windows
 
 DLLDEF=XenPVDAccess.def
 
-INCLUDES=$(INCLUDES);..\..\pvdrivers\win\xeniface\include
-SOURCES=XenPVDAccess.cpp XenPVDAccess.rc
+INCLUDES=$(INCLUDES);..\..\xenhdrs;..\..\pvdrivers\win\xeniface\include;..\..\pvdrivers\win\xenbus\include\OpenXTV4V
+SOURCES=OpenXTV4VAccess.cpp XenPVDAccess.cpp XenPVDAccess.rc

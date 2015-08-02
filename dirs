@@ -2,10 +2,10 @@ DIRS=removedev \
      xenutil \
      xenevtchn \
 #     net \
-     wnet \
-     xenvbd \
+#     wnet \
+#     xenvbd \
      xenuser \
-     xenv4v \
+#     xenv4v \
      enableuninst \
      installdriver \
      install \

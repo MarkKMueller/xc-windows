@@ -12,7 +12,7 @@ TARGETLIBS=$(DDK_LIB_PATH)\ndis.lib \
 	       $(TARGETPATH_ARCH)\xevtchn.lib \
 	       $(TARGETPATH_ARCH)\xenutil.lib
 
-INCLUDES=$(INCLUDES);..;..\..\xenhdrs
+INCLUDES=$(INCLUDES);..;..\..\xenhdrs;..\..\xenuser\XenPVDAccess;..\..\pvdrivers\win\xeniface\include;..\..\pvdrivers\win\xenbus\include\OpenXTV4V
 
 SOURCES=\
     adapter.c \

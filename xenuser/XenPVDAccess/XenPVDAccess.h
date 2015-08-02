@@ -23,6 +23,11 @@
 #ifndef _XENPVDACCESS_H_
 #define _XENPVDACCESS_H_
 
+#include <windows.h>
+#include <stdlib.h>
+#include <setupapi.h>
+
+#include <winioctl.h>
 #include "xeniface_ioctls.h"
 
 #ifdef XSPVDRIVERAPI_EXPORTS
@@ -208,20 +213,16 @@ class cFunctionSentinel {
 public:
     cFunctionSentinel(const char *aFunctionName)
         : FunctionName(aFunctionName) {
-        IndentEntry();
         OutputDebugStringA(FunctionName);
         OutputDebugStringA(": ENTRY\n");
-        EntryLevel++;
     }
 
     ~cFunctionSentinel() {
-        IndentEntry();
         OutputDebugStringA(FunctionName);
         OutputDebugStringA(": EXIT\n");
     }
 
     void PostMessage(const char *aFormatString, ...) {
-        IndentEntry();
         OutputDebugStringA(FunctionName);
         OutputDebugStringA(": ");
         char outputBuffer[1024];
@@ -235,13 +236,6 @@ public:
     }
 
 protected:
-    void IndentEntry() {
-        for (unsigned i = 0; i < EntryLevel; i++) {
-            OutputDebugStringA(" ");
-        }
-    }
-
-    static unsigned EntryLevel;
     const char *FunctionName;
 };
 
@@ -254,12 +248,90 @@ public:
     static cXenPVDAccess *CreateXenPVDAccess() {
         return new cXenPVDAccess;
     }
-    static void DestroyXenPVDAccess(void *access) {
-        delete (cXenPVDAccess *)access;
+    static void DestroyXenPVDAccess(void *aAccess) {
+        delete (cXenPVDAccess *)aAccess;
     }
 
-    cXenPVDAccess();
-    ~cXenPVDAccess();
+    cXenPVDAccess(int aAttributeFlags = 0) :
+        PVDriverDevice(INVALID_HANDLE_VALUE),
+        ValidIOCTLInterface(false) {
+        dCreateSentinel(sentinel);
+
+        // Setup the IOCTL interface.
+        HDEVINFO devInfo = SetupDiGetClassDevs(&GUID_INTERFACE_XENIFACE, 0, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+        if (INVALID_HANDLE_VALUE == devInfo) {
+            int errorCode = GetLastError();
+            sentinel.PostMessage("SetupDiGetClassDevs Returned an invalid handle. Error: %d", errorCode);
+            SetLastError(errorCode);
+            return;
+        }
+
+        SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
+        deviceInterfaceData.cbSize = sizeof(deviceInterfaceData);
+        if (!SetupDiEnumDeviceInterfaces(devInfo, NULL, &GUID_INTERFACE_XENIFACE, 0, &deviceInterfaceData)) {
+            int errorCode = GetLastError();
+            sentinel.PostMessage("SetupDiEnumDeviceInterfaces Returned Error: %d", errorCode);
+            SetLastError(errorCode);
+            return;
+        }
+
+        // Follow MS defined proceedure to find the object size for the device interface detail.
+        DWORD dataByteCount;
+        SetupDiGetDeviceInterfaceDetail(devInfo, &deviceInterfaceData, NULL, 0, &dataByteCount, NULL);
+        const unsigned errorCode = GetLastError();
+        if (ERROR_INSUFFICIENT_BUFFER != errorCode) {
+            sentinel.PostMessage("SetupDiGetDeviceInterfaceDetail Returned unexpected Error: %d", errorCode);
+            SetLastError(errorCode);
+            return;
+        }
+
+        SP_DEVICE_INTERFACE_DETAIL_DATA *deviceInterfaceDetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA *)new char[dataByteCount];
+        if (!deviceInterfaceDetailData) {
+            sentinel.PostMessage("Out of memory. File: %s, Line #: %d", __FILE__, __LINE__);
+            SetLastError(ERROR_OUTOFMEMORY);
+            return;
+        }
+
+        deviceInterfaceDetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
+
+        if (!SetupDiGetDeviceInterfaceDetail(devInfo, &deviceInterfaceData, deviceInterfaceDetailData, dataByteCount, NULL, NULL)) {
+            delete[] deviceInterfaceDetailData;
+            int errorCode = GetLastError();
+            sentinel.PostMessage("SetupDiGetDeviceInterfaceDetail Returned Error: %d", errorCode);
+            SetLastError(errorCode);
+            return;
+        }
+
+        PVDriverDevice = CreateFile(deviceInterfaceDetailData->DevicePath,
+                                    FILE_GENERIC_READ | FILE_GENERIC_WRITE,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                    NULL,
+                                    OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL | aAttributeFlags,
+                                    NULL);
+
+        delete[] deviceInterfaceDetailData;
+        if (PVDriverDevice == INVALID_HANDLE_VALUE) {
+            int errorCode = GetLastError();
+            sentinel.PostMessage("CreateFile Returned Error: %d", errorCode);
+            SetLastError(errorCode);
+            return;
+        }
+
+        ValidIOCTLInterface = true;
+    }
+
+    ~cXenPVDAccess() {
+        dCreateSentinel(sentinel);
+        if (INVALID_HANDLE_VALUE != PVDriverDevice) {
+            CloseHandle(PVDriverDevice);
+        }
+    }
+
+
+    HANDLE GetHandle() {
+        return PVDriverDevice;
+    }
 
     int EvtchnBindUnboundPort(unsigned short remoteDomain,
                               HANDLE event,
@@ -359,6 +431,7 @@ protected:
     cXenPVDAccess *XenPVDriverAccess;
     void *WatchHandle;
 };
+
 #endif  // _cplusplus
 
 #endif // _XENPVDACCESS_H_
